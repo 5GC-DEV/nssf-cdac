@@ -272,7 +272,7 @@ func GetRestrictedSnssaiListFromConfig(tai models.Tai) []models.RestrictedSnssai
 	defer factory.ConfigLock.RUnlock()
 	for _, taConfig := range factory.NssfConfig.Configuration.TaList {
 		if reflect.DeepEqual(*taConfig.Tai, tai) {
-			if taConfig.RestrictedSnssaiList != nil && len(taConfig.RestrictedSnssaiList) != 0 {
+			if len(taConfig.RestrictedSnssaiList) != 0 {
 				return taConfig.RestrictedSnssaiList
 			} else {
 				return nil
@@ -428,7 +428,7 @@ func AddAllowedSnssai(allowedSnssai models.AllowedSnssai, accessType models.Acce
 func AddAmfInformation(tai models.Tai, authorizedNetworkSliceInfo *models.AuthorizedNetworkSliceInfo) {
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
-	if authorizedNetworkSliceInfo.AllowedNssaiList == nil || len(authorizedNetworkSliceInfo.AllowedNssaiList) == 0 {
+	if len(authorizedNetworkSliceInfo.AllowedNssaiList) == 0 {
 		return
 	}
 
@@ -459,7 +459,7 @@ func AddAmfInformation(tai models.Tai, authorizedNetworkSliceInfo *models.Author
 			continue
 		} else {
 			// Add AMF Set to Authorized Network Slice Info
-			if amfSetConfig.AmfList != nil && len(amfSetConfig.AmfList) != 0 {
+			if len(amfSetConfig.AmfList) != 0 {
 				// List of candidate AMF(s) provided in configuration
 				authorizedNetworkSliceInfo.CandidateAmfList = append(authorizedNetworkSliceInfo.CandidateAmfList, amfSetConfig.AmfList...)
 			} else {
