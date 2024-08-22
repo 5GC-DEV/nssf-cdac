@@ -20,21 +20,21 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/omec-project/openapi/models"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
-
-	"github.com/omec-project/http2_util"
-	"github.com/omec-project/logger_util"
 	"github.com/omec-project/nssf/consumer"
 	"github.com/omec-project/nssf/context"
 	"github.com/omec-project/nssf/factory"
 	"github.com/omec-project/nssf/logger"
+	"github.com/omec-project/nssf/metrics"
 	"github.com/omec-project/nssf/nssaiavailability"
 	"github.com/omec-project/nssf/nsselection"
 	"github.com/omec-project/nssf/util"
+	"github.com/omec-project/openapi/models"
+	"github.com/omec-project/util/http2_util"
+	logger_util "github.com/omec-project/util/logger"
 	"github.com/omec-project/util/path_util"
 	pathUtilLogger "github.com/omec-project/util/path_util/logger"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
 )
 
 type NSSF struct{}
@@ -162,6 +162,8 @@ func (nssf *NSSF) Start() {
 	nssaiavailability.AddService(router)
 	nsselection.AddService(router)
 
+	go metrics.InitMetrics()
+
 	self := context.NSSF_Self()
 	addr := fmt.Sprintf("%s:%d", self.BindingIPv4, self.SBIPort)
 
@@ -266,7 +268,7 @@ func (nssf *NSSF) StartKeepAliveTimer(nfProfile models.NfProfile) {
 		nfProfile.HeartBeatTimer = 60
 	}
 	logger.InitLog.Infof("Started KeepAlive Timer: %v sec", nfProfile.HeartBeatTimer)
-	//AfterFunc starts timer and waits for KeepAliveTimer to elapse and then calls nssf.UpdateNF function
+	// AfterFunc starts timer and waits for KeepAliveTimer to elapse and then calls nssf.UpdateNF function
 	KeepAliveTimer = time.AfterFunc(time.Duration(nfProfile.HeartBeatTimer)*time.Second, nssf.UpdateNF)
 }
 
@@ -286,7 +288,7 @@ func (nssf *NSSF) BuildAndSendRegisterNFInstance() (models.NfProfile, error) {
 		return profile, err
 	}
 	initLog.Infof("Pcf Profile Registering to NRF: %v", profile)
-	//Indefinite attempt to register until success
+	// Indefinite attempt to register until success
 	profile, _, self.NfId, err = consumer.SendRegisterNFInstance(self.NrfUri, self.NfId, profile)
 	return profile, err
 }
@@ -299,7 +301,7 @@ func (nssf *NSSF) UpdateNF() {
 		initLog.Warnf("KeepAlive timer has been stopped.")
 		return
 	}
-	//setting default value 60 sec
+	// setting default value 60 sec
 	var heartBeatTimer int32 = 60
 	pitem := models.PatchItem{
 		Op:    "replace",
@@ -311,10 +313,10 @@ func (nssf *NSSF) UpdateNF() {
 	nfProfile, problemDetails, err := consumer.SendUpdateNFInstance(patchItem)
 	if problemDetails != nil {
 		initLog.Errorf("NSSF update to NRF ProblemDetails[%v]", problemDetails)
-		//5xx response from NRF, 404 Not Found, 400 Bad Request
+		// 5xx response from NRF, 404 Not Found, 400 Bad Request
 		if (problemDetails.Status >= 500 && problemDetails.Status <= 599) ||
 			problemDetails.Status == 404 || problemDetails.Status == 400 {
-			//register with NRF full profile
+			// register with NRF full profile
 			nfProfile, err = nssf.BuildAndSendRegisterNFInstance()
 			if err != nil {
 				initLog.Errorf("NSSF update to NRF Error[%s]", err.Error())
@@ -333,9 +335,10 @@ func (nssf *NSSF) UpdateNF() {
 		heartBeatTimer = nfProfile.HeartBeatTimer
 	}
 	logger.InitLog.Debugf("Restarted KeepAlive Timer: %v sec", heartBeatTimer)
-	//restart timer with received HeartBeatTimer value
+	// restart timer with received HeartBeatTimer value
 	KeepAliveTimer = time.AfterFunc(time.Duration(heartBeatTimer)*time.Second, nssf.UpdateNF)
 }
+
 func (nssf *NSSF) registerNF() {
 	for msg := range factory.ConfigPodTrigger {
 		initLog.Infof("Minimum configuration from config pod available %v", msg)
