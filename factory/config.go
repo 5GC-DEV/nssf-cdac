@@ -16,7 +16,7 @@ import (
 	protos "github.com/omec-project/config5g/proto/sdcoreConfig"
 	"github.com/omec-project/nssf/logger"
 	"github.com/omec-project/openapi/models"
-	logger_util "github.com/omec-project/util/logger"
+	utilLogger "github.com/omec-project/util/logger"
 )
 
 const (
@@ -24,10 +24,10 @@ const (
 )
 
 type Config struct {
-	Info          *Info               `yaml:"info"`
-	Configuration *Configuration      `yaml:"configuration"`
-	Logger        *logger_util.Logger `yaml:"logger"`
-	Subscriptions []Subscription      `yaml:"subscriptions,omitempty"`
+	Info          *Info              `yaml:"info"`
+	Configuration *Configuration     `yaml:"configuration"`
+	Logger        *utilLogger.Logger `yaml:"logger"`
+	Subscriptions []Subscription     `yaml:"subscriptions,omitempty"`
 }
 
 type Info struct {
@@ -58,11 +58,17 @@ type Configuration struct {
 
 type Sbi struct {
 	Scheme models.UriScheme `yaml:"scheme"`
+	TLS    *TLS             `yaml:"tls"`
 	// Currently only support IPv4 and thus `Ipv4Addr` field shall not be empty
 	RegisterIPv4 string `yaml:"registerIPv4,omitempty"` // IP that is registered at NRF.
 	// IPv6Addr string `yaml:"ipv6Addr,omitempty"`
 	BindingIPv4 string `yaml:"bindingIPv4,omitempty"` // IP used to run the server in the node.
 	Port        int    `yaml:"port"`
+}
+
+type TLS struct {
+	PEM string `yaml:"pem,omitempty"`
+	Key string `yaml:"key,omitempty"`
 }
 
 type AmfConfig struct {

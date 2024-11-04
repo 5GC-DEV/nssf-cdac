@@ -308,11 +308,11 @@ func AuthorizeOfAmfTaFromConfig(nfId string, tai models.Tai) (models.AuthorizedN
 			if err1 != nil {
 				logger.Util.Errorf("Marshal error in AuthorizeOfAmfTaFromConfig: %+v", err1)
 			}
-			err := fmt.Errorf("No supported S-NSSAI list by AMF %s under TAI %s in NSSF configuration", nfId, e)
+			err := fmt.Errorf("no supported S-NSSAI list by AMF %s under TAI %s in NSSF configuration", nfId, e)
 			return authorizedNssaiAvailabilityData, err
 		}
 	}
-	err := fmt.Errorf("No AMF configuration of %s", nfId)
+	err := fmt.Errorf("no AMF configuration of %s", nfId)
 	return authorizedNssaiAvailabilityData, err
 }
 
@@ -336,7 +336,7 @@ func AuthorizeOfAmfFromConfig(nfId string) ([]models.AuthorizedNssaiAvailability
 			return authorizedNssaiAvailabilityDataList, nil
 		}
 	}
-	err := fmt.Errorf("No AMF configuration of %s", nfId)
+	err := fmt.Errorf("no AMF configuration of %s", nfId)
 	return authorizedNssaiAvailabilityDataList, err
 }
 
@@ -407,7 +407,7 @@ func AddAllowedSnssai(allowedSnssai models.AllowedSnssai, accessType models.Acce
 		if authorizedNetworkSliceInfo.AllowedNssaiList[i].AccessType == accessType {
 			hitAllowedNssai = true
 			if len(authorizedNetworkSliceInfo.AllowedNssaiList[i].AllowedSnssaiList) == allowedNssaiNum {
-				logger.Util.Infof("Unable to add a new Allowed S-NSSAI since already eight S-NSSAIs in Allowed NSSAI")
+				logger.Util.Infof("unable to add a new Allowed S-NSSAI since already eight S-NSSAIs in Allowed NSSAI")
 			} else {
 				authorizedNetworkSliceInfo.AllowedNssaiList[i].AllowedSnssaiList = append(authorizedNetworkSliceInfo.AllowedNssaiList[i].AllowedSnssaiList, allowedSnssai)
 			}
@@ -502,6 +502,6 @@ func AddAmfInformation(tai models.Tai, authorizedNetworkSliceInfo *models.Author
 	}
 
 	if !hitAmf {
-		logger.Util.Warnf("No candidate AMF or AMF Set can serve the UE")
+		logger.Util.Warnf("no candidate AMF or AMF Set can serve the UE")
 	}
 }
