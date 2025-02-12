@@ -27,7 +27,8 @@ type Config struct {
 	Info          *Info              `yaml:"info"`
 	Configuration *Configuration     `yaml:"configuration"`
 	Logger        *utilLogger.Logger `yaml:"logger"`
-	Subscriptions []Subscription     `yaml:"subscriptions,omitempty"`
+	CfgLocation   string
+	Subscriptions []Subscription `yaml:"subscriptions,omitempty"`
 }
 
 type Info struct {
@@ -117,7 +118,7 @@ func init() {
 	ConfigPodTrigger = make(chan bool)
 }
 
-func (c *Config) updateConfig(commChannel chan *protos.NetworkSliceResponse) bool {
+func (c *Config) UpdateConfig(commChannel chan *protos.NetworkSliceResponse) bool {
 	var minConfig bool
 	for rsp := range commChannel {
 		logger.GrpcLog.Infoln("Received updateConfig in the nssf app : ", rsp)
