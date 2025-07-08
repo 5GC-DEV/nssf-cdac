@@ -33,7 +33,7 @@ import (
 	"github.com/omec-project/openapi/models"
 	"github.com/omec-project/util/http2_util"
 	utilLogger "github.com/omec-project/util/logger"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -50,7 +50,7 @@ type (
 var config Config
 
 var nssfCLi = []cli.Flag{
-	cli.StringFlag{
+	&cli.StringFlag{
 		Name:     "cfg",
 		Usage:    "nssf config file",
 		Required: true,
@@ -66,7 +66,7 @@ func (*NSSF) GetCliCmd() (flags []cli.Flag) {
 	return nssfCLi
 }
 
-func (nssf *NSSF) Initialize(c *cli.Context) error {
+func (nssf *NSSF) Initialize(c *cli.Command) error {
 	config = Config{
 		cfg: c.String("cfg"),
 	}
@@ -113,7 +113,7 @@ func manageGrpcClient(webuiUri string) {
 	count := 0
 	for {
 		if client != nil {
-			if client.CheckGrpcConnectivity() != "ready" {
+			if client.CheckGrpcConnectivity() != "READY" {
 				time.Sleep(time.Second * 30)
 				count++
 				if count > 5 {
@@ -142,6 +142,8 @@ func manageGrpcClient(webuiUri string) {
 				go factory.NssfConfig.UpdateConfig(configChannel)
 				logger.InitLog.Infoln("NSSF updateConfig is triggered")
 			}
+
+			time.Sleep(time.Second * 5) // Fixes (avoids) 100% CPU utilization
 		} else {
 			client, err = grpcClient.ConnectToConfigServer(webuiUri)
 			stream = nil
@@ -178,9 +180,9 @@ func (nssf *NSSF) setLogLevel() {
 	}
 }
 
-func (nssf *NSSF) FilterCli(c *cli.Context) (args []string) {
+func (nssf *NSSF) FilterCli(c *cli.Command) (args []string) {
 	for _, flag := range nssf.GetCliCmd() {
-		name := flag.GetName()
+		name := flag.Names()[0]
 		value := fmt.Sprint(c.Generic(name))
 		if value == "" {
 			continue
@@ -227,10 +229,14 @@ func (nssf *NSSF) Start() {
 	}
 
 	serverScheme := factory.NssfConfig.Configuration.Sbi.Scheme
-	if serverScheme == "http" {
+	switch serverScheme {
+	case "http":
 		err = server.ListenAndServe()
-	} else if serverScheme == "https" {
+	case "https":
 		err = server.ListenAndServeTLS(self.PEM, self.Key)
+	default:
+		logger.InitLog.Fatalf("HTTP server setup failed: invalid server scheme %+v", serverScheme)
+		return
 	}
 
 	if err != nil {
@@ -238,7 +244,7 @@ func (nssf *NSSF) Start() {
 	}
 }
 
-func (nssf *NSSF) Exec(c *cli.Context) error {
+func (nssf *NSSF) Exec(c *cli.Command) error {
 	logger.InitLog.Debugln("args:", c.String("cfg"))
 	args := nssf.FilterCli(c)
 	logger.InitLog.Debugln("filter:", args)
