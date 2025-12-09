@@ -159,8 +159,7 @@ func (c *Config) UpdateConfig(commChannel chan *protos.NetworkSliceResponse) boo
 							}
 							// Only append if a new slice
 							if !exists {
-								NssfConfig.Configuration.SupportedNssaiInPlmnList[i].SupportedSnssaiList =
-									append(NssfConfig.Configuration.SupportedNssaiInPlmnList[i].SupportedSnssaiList, *nssai)
+								NssfConfig.Configuration.SupportedNssaiInPlmnList[i].SupportedSnssaiList = append(NssfConfig.Configuration.SupportedNssaiInPlmnList[i].SupportedSnssaiList, *nssai)
 							}
 							found = true
 							break
