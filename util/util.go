@@ -94,9 +94,14 @@ func CheckSupportedSnssaiInPlmn(snssai models.Snssai, plmnId models.PlmnId) bool
 
 // Check whether S-NSSAIs in NSSAI are supported or not in PLMN
 func CheckSupportedNssaiInPlmn(nssai []models.Snssai, plmnId models.PlmnId) bool {
+	logger.Util.Infof("CheckSupportedNssaiInPlmn | Start | PLMN=%+v | Requested=%+v",
+		plmnId, nssai)
+
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
 	for _, supportedNssaiInPlmn := range factory.NssfConfig.Configuration.SupportedNssaiInPlmnList {
+		logger.Util.Infof("Validating Requested plmn=%+v", plmnId)
+		logger.Util.Infof("Validating supported plmn=%+v", supportedNssaiInPlmn.PlmnId)
 		if *supportedNssaiInPlmn.PlmnId == plmnId {
 			for _, snssai := range nssai {
 				// Standard S-NSSAIs are supposed to be supported
@@ -107,6 +112,8 @@ func CheckSupportedNssaiInPlmn(nssai []models.Snssai, plmnId models.PlmnId) bool
 
 				hitSupportedNssai := false
 				for _, supportedSnssai := range supportedNssaiInPlmn.SupportedSnssaiList {
+					logger.Util.Infof("Validating Requested S-NSSAI=%+v", snssai)
+					logger.Util.Infof("Validating supported S-NSSAI=%+v", supportedSnssai)
 					if snssai == supportedSnssai {
 						hitSupportedNssai = true
 						break
