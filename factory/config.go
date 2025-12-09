@@ -147,16 +147,22 @@ func (c *Config) UpdateConfig(commChannel chan *protos.NetworkSliceResponse) boo
 					logger.GrpcLog.Infoln("Slice Sd ", ns.Nssai.Sd)
 					sNssaiInPlmns.SupportedSnssaiList = append(sNssaiInPlmns.SupportedSnssaiList, *nssai)
 					found := false
-					for _, cplmn := range NssfConfig.Configuration.SupportedPlmnList {
-						if (cplmn.Mnc == plmn.Mnc) && (cplmn.Mcc == plmn.Mcc) {
+					for i, cplmn := range NssfConfig.Configuration.SupportedPlmnList {
+						if cplmn.Mnc == plmn.Mnc && cplmn.Mcc == plmn.Mcc {
+							// Append S-NSSAI to existing PLMN entry
+							NssfConfig.Configuration.SupportedNssaiInPlmnList[i].SupportedSnssaiList =
+								append(NssfConfig.Configuration.SupportedNssaiInPlmnList[i].SupportedSnssaiList, *nssai)
 							found = true
 							break
 						}
 					}
+
 					if !found {
+						// New PLMN → add both PLMN and S-NSSAI
 						NssfConfig.Configuration.SupportedPlmnList = append(NssfConfig.Configuration.SupportedPlmnList, *plmn)
 						NssfConfig.Configuration.SupportedNssaiInPlmnList = append(NssfConfig.Configuration.SupportedNssaiInPlmnList, sNssaiInPlmns)
 					}
+
 				} else {
 					logger.GrpcLog.Infoln("Plmn not present in the message ")
 				}
