@@ -81,7 +81,7 @@ func parseQueryParameter(query url.Values) (plugin.NsselectionQueryParameter, er
 		param.SupportedFeatures = query.Get("supported-features")
 	}
 
-	return param, err
+	return param, nil
 }
 
 // Check if the NF service consumer is authorized
@@ -135,6 +135,10 @@ func NSSelectionGetProcedure(query url.Values) (*models.AuthorizedNetworkSliceIn
 
 	// Parse query parameter
 	param, err := parseQueryParameter(query)
+	logger.Nsselection.Infof("RequestedNssai: %+v", param.SliceInfoRequestForRegistration.RequestedNssai)
+	logger.Nsselection.Infof("SubscribedNssai: %+v", param.SliceInfoRequestForRegistration.SubscribedNssai)
+	logger.Nsselection.Infof("TAI: %+v", param.Tai)
+
 	if err != nil {
 		// status = http.StatusBadRequest
 		problemDetails = &models.ProblemDetails{
