@@ -149,9 +149,22 @@ func (c *Config) UpdateConfig(commChannel chan *protos.NetworkSliceResponse) boo
 					found := false
 					for i, cplmn := range NssfConfig.Configuration.SupportedPlmnList {
 						if cplmn.Mnc == plmn.Mnc && cplmn.Mcc == plmn.Mcc {
-							// Append S-NSSAI to existing PLMN entry
-							NssfConfig.Configuration.SupportedNssaiInPlmnList[i].SupportedSnssaiList =
-								append(NssfConfig.Configuration.SupportedNssaiInPlmnList[i].SupportedSnssaiList, *nssai)
+
+							// Check if the S-NSSAI exists already
+							exists := false
+							for _, existingSnssai := range NssfConfig.Configuration.SupportedNssaiInPlmnList[i].SupportedSnssaiList {
+								if existingSnssai.Sst == nssai.Sst && existingSnssai.Sd == nssai.Sd {
+									exists = true
+									break
+								}
+							}
+
+							// Only append if a new slice
+							if !exists {
+								NssfConfig.Configuration.SupportedNssaiInPlmnList[i].SupportedSnssaiList =
+									append(NssfConfig.Configuration.SupportedNssaiInPlmnList[i].SupportedSnssaiList, *nssai)
+							}
+
 							found = true
 							break
 						}
