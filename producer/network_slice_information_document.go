@@ -110,14 +110,16 @@ func HandleNSSelectionGet(request *httpwrapper.Request) *httpwrapper.Response {
 		return httpwrapper.NewResponse(http.StatusOK, nil, response)
 	} else if problemDetails != nil {
 		stats.IncrementNssfNsSelectionsStats(nfType, nfId, "FAILURE")
+		logger.Nsselection.Infof("[HandleNSSelectionGet]---Handle NSSelectionGet %v", int(problemDetails.Status))
 		return httpwrapper.NewResponse(int(problemDetails.Status), nil, problemDetails)
 	}
-	problemDetails = &models.ProblemDetails{
-		Status: http.StatusForbidden,
-		Cause:  "UNSPECIFIED",
-	}
-	stats.IncrementNssfNsSelectionsStats(nfType, nfId, "FAILURE")
-	return httpwrapper.NewResponse(http.StatusForbidden, nil, problemDetails)
+	// problemDetails = &models.ProblemDetails{
+	// 	Status: http.StatusForbidden,
+	// 	Cause:  "UNSPECIFIED",
+	// }
+	// stats.IncrementNssfNsSelectionsStats(nfType, nfId, "FAILURE")
+	// return httpwrapper.NewResponse(http.StatusForbidden, nil, problemDetails)
+	return nil
 }
 
 func NSSelectionGetProcedure(query url.Values) (*models.AuthorizedNetworkSliceInfo, *models.ProblemDetails) {
