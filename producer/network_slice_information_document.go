@@ -164,6 +164,8 @@ func NSSelectionGetProcedure(query url.Values) (*models.AuthorizedNetworkSliceIn
 	if param.SliceInfoRequestForRegistration != nil {
 		// Network slice information is requested during the Registration procedure
 		status = nsselectionForRegistration(param, response, problemDetails)
+		logger.Nsselection.Infof("[NSSelectionGetProcedure] 111---------status: %+v", status)
+
 	} else {
 		// Network slice information is requested during the PDU session establishment procedure
 		status = nsselectionForPduSession(param, response, problemDetails)

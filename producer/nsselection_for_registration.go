@@ -162,7 +162,9 @@ func setConfiguredNssai(
 
 // Validate SST value in S-NSSAI
 func validateSnssaiSst(snssai models.Snssai) *models.ProblemDetails {
+	logger.Nsselection.Infof("[validateSnssaiSst]----Enter validate fx for SST value: %d", snssai.Sst)
 	if snssai.Sst < 1 || snssai.Sst > 255 {
+		logger.Nsselection.Infof("[validateSnssaiSst]----SST value: %d", snssai.Sst)
 		return &models.ProblemDetails{
 			Title:  util.UNSUPPORTED_RESOURCE,
 			Status: http.StatusForbidden,
@@ -181,6 +183,7 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 ) int {
 	var status int
 	if param.SliceInfoRequestForRegistration != nil {
+		logger.Nsselection.Infof("[nsselectionForRegistration]----SliceInfoRequestForRegistration is present")
 		for _, snssai := range param.SliceInfoRequestForRegistration.RequestedNssai {
 			if pd := validateSnssaiSst(snssai); pd != nil {
 				*problemDetails = *pd
