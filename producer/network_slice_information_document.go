@@ -52,13 +52,19 @@ func parseQueryParameter(query url.Values) (plugin.NsselectionQueryParameter, er
 		}
 	}
 
-	if query.Get("slice-info-request-for-pdu-session") != "" {
+	if val := query.Get("slice-info-request-for-pdu-session"); val != "" {
+		logger.Nsselection.Infof("[parseQueryParameter]--Found slice-info-request-for-pdu-session in query")
+		logger.Nsselection.Infof("[parseQueryParameter]--Raw JSON value: %s", val)
 		param.SliceInfoRequestForPduSession = new(models.SliceInfoForPduSession)
-		err = json.NewDecoder(strings.NewReader(
-			query.Get("slice-info-request-for-pdu-session"))).Decode(param.SliceInfoRequestForPduSession)
+		err = json.NewDecoder(strings.NewReader(val)).Decode(param.SliceInfoRequestForPduSession)
 		if err != nil {
+			// This is exactly where your 400 is coming from.
+			// We log the error and the raw value that caused it.
+			logger.Nsselection.Infof("[parseQueryParameter]--JSON Decode Error for PDU Session Info: %v", err)
+			logger.Nsselection.Infof("[parseQueryParameter]--Problematic JSON string was: [%s]", val)
 			return param, err
 		}
+		logger.Nsselection.Infof("[parseQueryParameter]--Successfully decoded slice-info-request-for-pdu-session")
 	}
 
 	if query.Get("home-plmn-id") != "" {
