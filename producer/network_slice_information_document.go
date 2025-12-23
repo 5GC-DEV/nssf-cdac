@@ -105,6 +105,7 @@ func HandleNSSelectionGet(request *httpwrapper.Request) *httpwrapper.Response {
 	nfType := GetNfTypeFromQueryParameters(query)
 	nfId := GetNfIdFromQueryParameters(query)
 
+	logger.Nsselection.Infof("[HandleNSSelectionGet]----- response,problemdetails-status: %+v  fdgfdsg %+v", response, int(problemDetails.Status))
 	if response != nil {
 		stats.IncrementNssfNsSelectionsStats(nfType, nfId, "SUCCESS")
 		return httpwrapper.NewResponse(http.StatusOK, nil, response)
@@ -127,8 +128,8 @@ func NSSelectionGetProcedure(query url.Values) (*models.AuthorizedNetworkSliceIn
 		response       *models.AuthorizedNetworkSliceInfo
 		problemDetails *models.ProblemDetails
 	)
-	response = &models.AuthorizedNetworkSliceInfo{}
-	problemDetails = &models.ProblemDetails{}
+	// response = &models.AuthorizedNetworkSliceInfo{}
+	// problemDetails = &models.ProblemDetails{}
 
 	// TODO: Record request times of the NF service consumer and response with ProblemDetails of 429 Too Many Requests
 	//       if the consumer has sent too many requests in a configured amount of time
@@ -157,6 +158,8 @@ func NSSelectionGetProcedure(query url.Values) (*models.AuthorizedNetworkSliceIn
 		}
 		return nil, problemDetails
 	}
+	response = &models.AuthorizedNetworkSliceInfo{}
+	problemDetails = &models.ProblemDetails{}
 
 	if param.SliceInfoRequestForRegistration != nil {
 		// Network slice information is requested during the Registration procedure
@@ -165,12 +168,15 @@ func NSSelectionGetProcedure(query url.Values) (*models.AuthorizedNetworkSliceIn
 		// Network slice information is requested during the PDU session establishment procedure
 		status = nsselectionForPduSession(param, response, problemDetails)
 	}
+	logger.Nsselection.Infof("[NSSelectionGetProcedure]---------status: %+v", status)
 
-	if status == http.StatusOK {
-		return response, problemDetails
-	} else {
-		return response, problemDetails
+	if status != http.StatusOK {
+		// If validation failed (like SST check), return nil for response
+		// so HandleNSSelectionGet moves to the 'else if problemDetails != nil' block
+		return nil, problemDetails
 	}
+
+	return response, nil
 }
 
 func GetNfTypeFromQueryParameters(query url.Values) (nfType string) {
