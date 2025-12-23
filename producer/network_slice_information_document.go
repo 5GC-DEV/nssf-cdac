@@ -110,6 +110,7 @@ func HandleNSSelectionGet(request *httpwrapper.Request) *httpwrapper.Response {
 		return httpwrapper.NewResponse(http.StatusOK, nil, response)
 	} else if problemDetails != nil {
 		stats.IncrementNssfNsSelectionsStats(nfType, nfId, "FAILURE")
+		logger.Nsselection.Infof("[HandleNSSelectionGet]----- ProblemDetailsStatus: %+v", int(problemDetails.Status))
 		return httpwrapper.NewResponse(int(problemDetails.Status), nil, problemDetails)
 	}
 	problemDetails = &models.ProblemDetails{

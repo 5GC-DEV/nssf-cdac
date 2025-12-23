@@ -12,6 +12,7 @@
 package producer
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/omec-project/nssf/logger"
@@ -159,6 +160,19 @@ func setConfiguredNssai(
 	}
 }
 
+// Validate SST value in S-NSSAI
+func validateSnssaiSst(snssai models.Snssai) *models.ProblemDetails {
+	if snssai.Sst < 1 || snssai.Sst > 255 {
+		return &models.ProblemDetails{
+			Title:  util.UNSUPPORTED_RESOURCE,
+			Status: http.StatusForbidden,
+			Detail: fmt.Sprintf("Invalid SST value: %d", snssai.Sst),
+			Cause:  "SNSSAI_NOT_SUPPORTED",
+		}
+	}
+	return nil
+}
+
 // Network slice selection for registration
 // The function is executed when the IE, `slice-info-request-for-registration`, is provided in query parameters
 func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
@@ -166,6 +180,15 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 	problemDetails *models.ProblemDetails,
 ) int {
 	var status int
+	if param.SliceInfoRequestForRegistration != nil {
+		for _, snssai := range param.SliceInfoRequestForRegistration.RequestedNssai {
+			if pd := validateSnssaiSst(snssai); pd != nil {
+				*problemDetails = *pd
+				return http.StatusForbidden
+			}
+		}
+	}
+
 	if param.HomePlmnId != nil {
 		// Check whether UE's Home PLMN is supported when UE is a roamer
 		if !util.CheckSupportedHplmn(*param.HomePlmnId) {
