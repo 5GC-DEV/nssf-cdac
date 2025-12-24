@@ -420,6 +420,21 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 		}
 	}
 
+	// If the NSSF cannot determine any Allowed or Configured S-NSSAI, it must not return 200.
+	// Instead, it should return 403 Forbidden with SNSSAI_NOT_SUPPORTED.
+	if len(authorizedNetworkSliceInfo.AllowedNssaiList) == 0 && len(authorizedNetworkSliceInfo.ConfiguredNssai) == 0 {
+		logger.Nsselection.Warnf("No S-NSSAI allowed or configured for the UE. Returning 403 to avoid empty 200 OK.")
+
+		*problemDetails = models.ProblemDetails{
+			Title:  util.UNSUPPORTED_RESOURCE,
+			Status: http.StatusForbidden,
+			Detail: "No S-NSSAI found for the provided information",
+			Cause:  "SNSSAI_NOT_SUPPORTED",
+		}
+
+		return http.StatusForbidden
+	}
+
 	status = http.StatusOK
 	return status
 }
