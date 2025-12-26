@@ -16,7 +16,6 @@ import (
 	"math/rand"
 	"net/http"
 
-	"github.com/omec-project/nssf/logger"
 	"github.com/omec-project/nssf/plugin"
 	"github.com/omec-project/nssf/util"
 	"github.com/omec-project/openapi/models"
@@ -38,15 +37,22 @@ func nsselectionForPduSession(param plugin.NsselectionQueryParameter,
 	problemDetails *models.ProblemDetails,
 ) int {
 	var status int
-	if param.SliceInfoRequestForRegistration != nil {
-		logger.Nsselection.Infof("[nsselectionForRegistration]----SliceInfoRequestForRegistration is present")
-		for _, snssai := range param.SliceInfoRequestForRegistration.RequestedNssai {
-			if pd := validateSnssaiSst(snssai); pd != nil {
-				*problemDetails = *pd
-				return http.StatusForbidden
+	if param.SliceInfoRequestForPduSession != nil {
+		if param.SliceInfoRequestForPduSession.SNssai == nil {
+			*problemDetails = models.ProblemDetails{
+				Title:  util.MALFORMED_REQUEST,
+				Status: http.StatusBadRequest,
+				Detail: "Missing sNssai in slice-info-for-pdu-session",
 			}
+			return http.StatusBadRequest
+		}
+
+		if pd := validateSnssaiSst(*param.SliceInfoRequestForPduSession.SNssai); pd != nil {
+			*problemDetails = *pd
+			return http.StatusForbidden
 		}
 	}
+
 	if param.HomePlmnId != nil {
 		// Check whether UE's Home PLMN is supported when UE is a roamer
 		if !util.CheckSupportedHplmn(*param.HomePlmnId) {
