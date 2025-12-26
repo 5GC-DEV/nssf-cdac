@@ -56,14 +56,34 @@ func parseQueryParameter(query url.Values) (plugin.NsselectionQueryParameter, er
 		logger.Nsselection.Infof("[parseQueryParameter]--Found slice-info-request-for-pdu-session in query")
 		logger.Nsselection.Infof("[parseQueryParameter]--Raw JSON value: %s", val)
 
-		param.SliceInfoRequestForPduSession = new(models.SliceInfoForPduSession)
-		err = json.NewDecoder(strings.NewReader(val)).Decode(param.SliceInfoRequestForPduSession)
+		// Step 1: decode into generic map
+		var raw map[string]any
+		if err = json.Unmarshal([]byte(val), &raw); err != nil {
+			logger.Nsselection.Errorf("[parseQueryParameter] raw JSON unmarshal error: %v", err)
+			return param, err
+		}
+
+		// Step 2: normalize sNssai if it's an array
+		if snssaiRaw, ok := raw["sNssai"]; ok {
+			if arr, ok := snssaiRaw.([]any); ok && len(arr) > 0 {
+				logger.Nsselection.Infof("[parseQueryParameter] normalizing sNssai array → object")
+				raw["sNssai"] = arr[0]
+			}
+		}
+
+		// Step 3: re-marshal normalized JSON
+		normalizedBytes, err := json.Marshal(raw)
 		if err != nil {
-			logger.Nsselection.Errorf("[parseQueryParameter]--JSON Decode Error for PDU Session Info: %v", err)
-			logger.Nsselection.Errorf("[parseQueryParameter]--Problematic JSON string was: [%s]", val)
-			logger.Nsselection.Errorf("[parseQueryParameter]--param at failure: %+v", param)
-			logger.Nsselection.Errorf("[parseQueryParameter]--param Go type: %T", param)
-			logger.Nsselection.Errorf("[parseQueryParameter]--err Go type: %T", err)
+			logger.Nsselection.Errorf("[parseQueryParameter] normalization marshal error: %v", err)
+			return param, err
+		}
+
+		// Step 4: decode into model
+		param.SliceInfoRequestForPduSession = new(models.SliceInfoForPduSession)
+		err = json.Unmarshal(normalizedBytes, param.SliceInfoRequestForPduSession)
+		if err != nil {
+			logger.Nsselection.Errorf("[parseQueryParameter] decode error for pdu-session: %v", err)
+			logger.Nsselection.Errorf("[parseQueryParameter] normalized JSON was: %s", string(normalizedBytes))
 			return param, err
 		}
 
