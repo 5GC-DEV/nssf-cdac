@@ -16,6 +16,7 @@ import (
 	"math/rand"
 	"net/http"
 
+	"github.com/omec-project/nssf/logger"
 	"github.com/omec-project/nssf/plugin"
 	"github.com/omec-project/nssf/util"
 	"github.com/omec-project/openapi/models"
@@ -38,7 +39,9 @@ func nsselectionForPduSession(param plugin.NsselectionQueryParameter,
 ) int {
 	var status int
 	if param.SliceInfoRequestForPduSession != nil {
+		logger.Nsselection.Infof("[nsselectionForPduSession] slice-info-request-for-pdu-session present")
 		if param.SliceInfoRequestForPduSession.SNssai == nil {
+			logger.Nsselection.Errorf("[nsselectionForPduSession] Missing sNssai in slice-info-for-pdu-session")
 			*problemDetails = models.ProblemDetails{
 				Title:  util.MALFORMED_REQUEST,
 				Status: http.StatusBadRequest,
@@ -46,11 +49,20 @@ func nsselectionForPduSession(param plugin.NsselectionQueryParameter,
 			}
 			return http.StatusBadRequest
 		}
-
+		logger.Nsselection.Infof(
+			"[nsselectionForPduSession] Validating S-NSSAI: SST=%d, SD=%s",
+			param.SliceInfoRequestForPduSession.SNssai.Sst,
+			param.SliceInfoRequestForPduSession.SNssai.Sd,
+		)
 		if pd := validateSnssaiSst(*param.SliceInfoRequestForPduSession.SNssai); pd != nil {
+			logger.Nsselection.Warnf(
+				"[nsselectionForPduSession] S-NSSAI validation failed: %+v",
+				pd,
+			)
 			*problemDetails = *pd
 			return http.StatusForbidden
 		}
+		logger.Nsselection.Infof("[nsselectionForPduSession] S-NSSAI validation successful")
 	}
 
 	if param.HomePlmnId != nil {
