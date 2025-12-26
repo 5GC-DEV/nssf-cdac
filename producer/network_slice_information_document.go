@@ -35,7 +35,7 @@ func parseQueryParameter(query url.Values) (plugin.NsselectionQueryParameter, er
 		param plugin.NsselectionQueryParameter
 		err   error
 	)
-
+	logger.Nsselection.Infof("[parseQueryParameter]--innn")
 	if query.Get("nf-type") != "" {
 		param.NfType = new(models.NfType)
 		*param.NfType = models.NfType(query.Get("nf-type"))
@@ -55,15 +55,18 @@ func parseQueryParameter(query url.Values) (plugin.NsselectionQueryParameter, er
 	if val := query.Get("slice-info-request-for-pdu-session"); val != "" {
 		logger.Nsselection.Infof("[parseQueryParameter]--Found slice-info-request-for-pdu-session in query")
 		logger.Nsselection.Infof("[parseQueryParameter]--Raw JSON value: %s", val)
+
 		param.SliceInfoRequestForPduSession = new(models.SliceInfoForPduSession)
 		err = json.NewDecoder(strings.NewReader(val)).Decode(param.SliceInfoRequestForPduSession)
 		if err != nil {
-			// This is exactly where your 400 is coming from.
-			// We log the error and the raw value that caused it.
-			logger.Nsselection.Infof("[parseQueryParameter]--JSON Decode Error for PDU Session Info: %v", err)
-			logger.Nsselection.Infof("[parseQueryParameter]--Problematic JSON string was: [%s]", val)
+			logger.Nsselection.Errorf("[parseQueryParameter]--JSON Decode Error for PDU Session Info: %v", err)
+			logger.Nsselection.Errorf("[parseQueryParameter]--Problematic JSON string was: [%s]", val)
+			logger.Nsselection.Errorf("[parseQueryParameter]--param at failure: %+v", param)
+			logger.Nsselection.Errorf("[parseQueryParameter]--param Go type: %T", param)
+			logger.Nsselection.Errorf("[parseQueryParameter]--err Go type: %T", err)
 			return param, err
 		}
+
 		logger.Nsselection.Infof("[parseQueryParameter]--Successfully decoded slice-info-request-for-pdu-session")
 	}
 
