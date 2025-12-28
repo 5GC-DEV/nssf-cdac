@@ -169,7 +169,6 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 	if param.HomePlmnId != nil {
 		// Check whether UE's Home PLMN is supported when UE is a roamer
 		if !util.CheckSupportedHplmn(*param.HomePlmnId) {
-
 			// [FIX] If Home PLMN is not supported, we cannot select slices.
 			// Return 403 Forbidden instead of 200 OK.
 			logger.Nsselection.Warnf("Home PLMN %+v not supported. Returning 403.", *param.HomePlmnId)
