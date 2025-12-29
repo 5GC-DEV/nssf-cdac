@@ -30,8 +30,23 @@ func useDefaultSubscribedSnssai(
 		mappingOfSnssai = util.GetMappingOfPlmnFromConfig(*param.HomePlmnId)
 
 		if mappingOfSnssai == nil {
-			logger.Nsselection.Warnf("no S-NSSAI mapping of UE's HPLMN %+v in NSSF configuration", *param.HomePlmnId)
-			return
+			// [FIX] If no mapping found, check if HPLMN matches Serving PLMN (Roaming Status).
+			// If they are the same, we don't strictly need a mapping object; we can proceed.
+			// Note: In strict roaming scenarios, this might be required, but for local testing it blocks valid requests.
+
+			// If TAI is present, check if PLMN ID matches Home PLMN ID
+			isSamePlmn := false
+			if param.Tai != nil &&
+				param.Tai.PlmnId.Mcc == param.HomePlmnId.Mcc &&
+				param.Tai.PlmnId.Mnc == param.HomePlmnId.Mnc {
+				isSamePlmn = true
+			}
+
+			if !isSamePlmn {
+				logger.Nsselection.Warnf("no S-NSSAI mapping of UE's HPLMN %+v in NSSF configuration", *param.HomePlmnId)
+				return
+			}
+			// If it is the same PLMN, we proceed without 'mappingOfSnssai' (it stays nil/empty)
 		}
 	}
 

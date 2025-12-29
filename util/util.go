@@ -99,7 +99,6 @@ func CheckSupportedTa(tai models.Tai) bool {
 		if supportedNssaiInPlmn.PlmnId != nil &&
 			supportedNssaiInPlmn.PlmnId.Mcc == tai.PlmnId.Mcc &&
 			supportedNssaiInPlmn.PlmnId.Mnc == tai.PlmnId.Mnc {
-
 			// Optional: Only log this in debug mode to avoid noise
 			// logger.Util.Infof("TA %v allowed based on Supported PLMN fallback", tai)
 			return true
