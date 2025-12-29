@@ -62,7 +62,6 @@ func parseQueryParameter(query url.Values) (plugin.NsselectionQueryParameter, er
 			logger.Nsselection.Errorf("[parseQueryParameter] raw JSON unmarshal error: %v", err)
 			return param, err
 		}
-
 		// Step 2: normalize sNssai if it's an array
 		if snssaiRaw, ok := raw["sNssai"]; ok {
 			if arr, ok := snssaiRaw.([]any); ok && len(arr) > 0 {
@@ -70,14 +69,13 @@ func parseQueryParameter(query url.Values) (plugin.NsselectionQueryParameter, er
 				raw["sNssai"] = arr[0]
 			}
 		}
-
 		// Step 3: re-marshal normalized JSON
-		normalizedBytes, err := json.Marshal(raw)
+		var normalizedBytes []byte
+		normalizedBytes, err = json.Marshal(raw)
 		if err != nil {
 			logger.Nsselection.Errorf("[parseQueryParameter] normalization marshal error: %v", err)
 			return param, err
 		}
-
 		// Step 4: decode into model
 		param.SliceInfoRequestForPduSession = new(models.SliceInfoForPduSession)
 		err = json.Unmarshal(normalizedBytes, param.SliceInfoRequestForPduSession)
