@@ -79,37 +79,56 @@ func CheckSupportedTa(tai models.Tai) bool {
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
 
+	// 1. Check Global TaList (Strict & Hex-Relaxed Match)
 	for _, taConfig := range factory.NssfConfig.Configuration.TaList {
-		// 1. Strict Match (Existing logic)
-		if reflect.DeepEqual(*taConfig.Tai, tai) {
+		if taConfig.Tai == nil {
+			continue
+		}
+		if compareTai(*taConfig.Tai, tai) {
 			return true
 		}
+	}
 
-		// 2. [FIX] Smart Match (Handle "0x" prefix and leading zeros)
-		// Request might be "0x000001", Config might be "1" or "000001"
-		if taConfig.Tai.PlmnId.Mcc == tai.PlmnId.Mcc && taConfig.Tai.PlmnId.Mnc == tai.PlmnId.Mnc {
-
-			// Normalize: Remove '0x' prefix
-			cfgTac := strings.TrimPrefix(taConfig.Tai.Tac, "0x")
-			reqTac := strings.TrimPrefix(tai.Tac, "0x")
-
-			// Convert hex string to integer for value comparison
-			// (e.g. "000001" becomes 1, "1" becomes 1)
-			cfgVal, err1 := strconv.ParseInt(cfgTac, 16, 64)
-			reqVal, err2 := strconv.ParseInt(reqTac, 16, 64)
-
-			if err1 == nil && err2 == nil && cfgVal == reqVal {
+	// 2. [FIX] Check AMF List (Fallback)
+	// Dynamic GRPC configuration often updates the AMF List with TAIs but misses the global TaList.
+	// We check if any AMF supports this TAI.
+	for _, amfConfig := range factory.NssfConfig.Configuration.AmfList {
+		for _, supportedData := range amfConfig.SupportedNssaiAvailabilityData {
+			if supportedData.Tai != nil && compareTai(*supportedData.Tai, tai) {
 				return true
 			}
 		}
 	}
 
+	// Log the failure details
 	e, err := json.Marshal(tai)
 	if err != nil {
 		logger.Util.Errorf("marshal error in CheckSupportedTa: %+v", err)
 	}
 	logger.Util.Warnf("no TA %s in NSSF configuration", e)
 	return false
+}
+
+// Helper function to compare TAI with Hex/Int flexibility
+func compareTai(configTai, reqTai models.Tai) bool {
+	// Check PLMN
+	if configTai.PlmnId.Mcc != reqTai.PlmnId.Mcc || configTai.PlmnId.Mnc != reqTai.PlmnId.Mnc {
+		return false
+	}
+
+	// Check TAC (Handle "0x" prefix and "000001" vs "1" mismatch)
+	cfgTac := strings.TrimPrefix(configTai.Tac, "0x")
+	reqTac := strings.TrimPrefix(reqTai.Tac, "0x")
+
+	cfgVal, err1 := strconv.ParseInt(cfgTac, 16, 64)
+	reqVal, err2 := strconv.ParseInt(reqTac, 16, 64)
+
+	if err1 == nil && err2 == nil {
+		return cfgVal == reqVal
+	}
+
+	// Fallback to string comparison if parsing fails
+	return cfgTac == reqTac
 }
 
 // Check whether the given S-NSSAI is supported or not in PLMN
