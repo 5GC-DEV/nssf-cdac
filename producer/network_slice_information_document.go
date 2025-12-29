@@ -53,39 +53,40 @@ func parseQueryParameter(query url.Values) (plugin.NsselectionQueryParameter, er
 	}
 
 	if val := query.Get("slice-info-request-for-pdu-session"); val != "" {
-		logger.Nsselection.Infof("[parseQueryParameter]--Found slice-info-request-for-pdu-session in query")
-		logger.Nsselection.Infof("[parseQueryParameter]--Raw JSON value: %s", val)
+		logger.Nsselection.Infof("[parseQueryParameter] Found slice-info-request-for-pdu-session in query")
+		logger.Nsselection.Infof("[parseQueryParameter] Raw JSON value: %s", val)
 
 		// Step 1: decode into generic map
-		var raw map[string]any
-		if err = json.Unmarshal([]byte(val), &raw); err != nil {
-			logger.Nsselection.Errorf("[parseQueryParameter] raw JSON unmarshal error: %v", err)
-			return param, err
+		raw := make(map[string]any)
+		if unmarshalErr := json.Unmarshal([]byte(val), &raw); unmarshalErr != nil {
+			logger.Nsselection.Errorf("[parseQueryParameter] raw JSON unmarshal error: %v", unmarshalErr)
+			return param, unmarshalErr
 		}
+
 		// Step 2: normalize sNssai if it's an array
-		if snssaiRaw, ok := raw["sNssai"]; ok {
+		if snssaiRaw, exists := raw["sNssai"]; exists {
 			if arr, ok := snssaiRaw.([]any); ok && len(arr) > 0 {
 				logger.Nsselection.Infof("[parseQueryParameter] normalizing sNssai array → object")
 				raw["sNssai"] = arr[0]
 			}
 		}
+
 		// Step 3: re-marshal normalized JSON
-		var normalizedBytes []byte
-		normalizedBytes, err = json.Marshal(raw)
-		if err != nil {
-			logger.Nsselection.Errorf("[parseQueryParameter] normalization marshal error: %v", err)
-			return param, err
-		}
-		// Step 4: decode into model
-		param.SliceInfoRequestForPduSession = new(models.SliceInfoForPduSession)
-		err = json.Unmarshal(normalizedBytes, param.SliceInfoRequestForPduSession)
-		if err != nil {
-			logger.Nsselection.Errorf("[parseQueryParameter] decode error for pdu-session: %v", err)
-			logger.Nsselection.Errorf("[parseQueryParameter] normalized JSON was: %s", string(normalizedBytes))
-			return param, err
+		normalizedBytes, marshalErr := json.Marshal(raw)
+		if marshalErr != nil {
+			logger.Nsselection.Errorf("[parseQueryParameter] normalization marshal error: %v", marshalErr)
+			return param, marshalErr
 		}
 
-		logger.Nsselection.Infof("[parseQueryParameter]--Successfully decoded slice-info-request-for-pdu-session")
+		// Step 4: decode into model
+		param.SliceInfoRequestForPduSession = new(models.SliceInfoForPduSession)
+		if decodeErr := json.Unmarshal(normalizedBytes, param.SliceInfoRequestForPduSession); decodeErr != nil {
+			logger.Nsselection.Errorf("[parseQueryParameter] decode error for pdu-session: %v", decodeErr)
+			logger.Nsselection.Errorf("[parseQueryParameter] normalized JSON was: %s", string(normalizedBytes))
+			return param, decodeErr
+		}
+
+		logger.Nsselection.Infof("[parseQueryParameter] Successfully decoded slice-info-request-for-pdu-session")
 	}
 
 	if query.Get("home-plmn-id") != "" {
