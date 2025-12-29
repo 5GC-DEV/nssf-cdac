@@ -99,7 +99,6 @@ func CheckSupportedTa(tai models.Tai) bool {
 			}
 		}
 	}
-
 	// Log the failure details
 	e, err := json.Marshal(tai)
 	if err != nil {
@@ -115,7 +114,6 @@ func compareTai(configTai, reqTai models.Tai) bool {
 	if configTai.PlmnId.Mcc != reqTai.PlmnId.Mcc || configTai.PlmnId.Mnc != reqTai.PlmnId.Mnc {
 		return false
 	}
-
 	// Check TAC (Handle "0x" prefix and "000001" vs "1" mismatch)
 	cfgTac := strings.TrimPrefix(configTai.Tac, "0x")
 	reqTac := strings.TrimPrefix(reqTai.Tac, "0x")
@@ -126,7 +124,6 @@ func compareTai(configTai, reqTai models.Tai) bool {
 	if err1 == nil && err2 == nil {
 		return cfgVal == reqVal
 	}
-
 	// Fallback to string comparison if parsing fails
 	return cfgTac == reqTac
 }
