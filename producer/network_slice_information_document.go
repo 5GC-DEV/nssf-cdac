@@ -44,35 +44,43 @@ func parseQueryParameter(query url.Values) (plugin.NsselectionQueryParameter, er
 	param.NfId = query.Get("nf-id")
 
 	if query.Get("slice-info-request-for-registration") != "" {
+		logger.Nsselection.Infof("[parseQueryParameter] slice-info-request-for-registration: inn")
 		param.SliceInfoRequestForRegistration = new(models.SliceInfoForRegistration)
 		err = json.NewDecoder(strings.NewReader(
 			query.Get("slice-info-request-for-registration"))).Decode(param.SliceInfoRequestForRegistration)
 		if err != nil {
+			logger.Nsselection.Infof("[parseQueryParameter] Failed to decode slice-info-request-for-registration: %v", err)
 			return param, err
 		}
 	}
 
 	if query.Get("slice-info-request-for-pdu-session") != "" {
+		logger.Nsselection.Infof("[parseQueryParameter] slice-info-request-for-pdu-session: inn")
 		param.SliceInfoRequestForPduSession = new(models.SliceInfoForPduSession)
 		err = json.NewDecoder(strings.NewReader(
 			query.Get("slice-info-request-for-pdu-session"))).Decode(param.SliceInfoRequestForPduSession)
 		if err != nil {
+			logger.Nsselection.Infof("[parseQueryParameter] Failed to decode slice-info-request-for-pdu-session: %v", err)
 			return param, err
 		}
 	}
 
 	if query.Get("home-plmn-id") != "" {
+		logger.Nsselection.Infof("[parseQueryParameter] home-plmn-id: inn")
 		param.HomePlmnId = new(models.PlmnId)
 		err = json.NewDecoder(strings.NewReader(query.Get("home-plmn-id"))).Decode(param.HomePlmnId)
 		if err != nil {
+			logger.Nsselection.Infof("[parseQueryParameter] Failed to decode home-plmn-id: %v", err)
 			return param, err
 		}
 	}
 
 	if query.Get("tai") != "" {
+		logger.Nsselection.Infof("[parseQueryParameter] tai: inn")
 		param.Tai = new(models.Tai)
 		err = json.NewDecoder(strings.NewReader(query.Get("tai"))).Decode(param.Tai)
 		if err != nil {
+			logger.Nsselection.Infof("[parseQueryParameter] Failed to decode tai: %v", err)
 			return param, err
 		}
 	}
