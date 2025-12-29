@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
+	"strings"
 
 	"github.com/omec-project/nssf/factory"
 	"github.com/omec-project/nssf/logger"
@@ -76,11 +78,32 @@ func CheckSupportedHplmn(homePlmnId models.PlmnId) bool {
 func CheckSupportedTa(tai models.Tai) bool {
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
+
 	for _, taConfig := range factory.NssfConfig.Configuration.TaList {
+		// 1. Strict Match (Existing logic)
 		if reflect.DeepEqual(*taConfig.Tai, tai) {
 			return true
 		}
+
+		// 2. [FIX] Smart Match (Handle "0x" prefix and leading zeros)
+		// Request might be "0x000001", Config might be "1" or "000001"
+		if taConfig.Tai.PlmnId.Mcc == tai.PlmnId.Mcc && taConfig.Tai.PlmnId.Mnc == tai.PlmnId.Mnc {
+
+			// Normalize: Remove '0x' prefix
+			cfgTac := strings.TrimPrefix(taConfig.Tai.Tac, "0x")
+			reqTac := strings.TrimPrefix(tai.Tac, "0x")
+
+			// Convert hex string to integer for value comparison
+			// (e.g. "000001" becomes 1, "1" becomes 1)
+			cfgVal, err1 := strconv.ParseInt(cfgTac, 16, 64)
+			reqVal, err2 := strconv.ParseInt(reqTac, 16, 64)
+
+			if err1 == nil && err2 == nil && cfgVal == reqVal {
+				return true
+			}
+		}
 	}
+
 	e, err := json.Marshal(tai)
 	if err != nil {
 		logger.Util.Errorf("marshal error in CheckSupportedTa: %+v", err)

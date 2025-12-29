@@ -190,7 +190,6 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 	if param.Tai != nil {
 		// Check whether UE's current TA is supported when UE provides TAI
 		if !util.CheckSupportedTa(*param.Tai) {
-
 			// [FIX] TA is not supported. We must return 403, not 200.
 			logger.Nsselection.Warnf("TA %+v not supported. Returning 403.", *param.Tai)
 
