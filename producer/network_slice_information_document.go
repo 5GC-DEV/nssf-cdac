@@ -54,15 +54,33 @@ func parseQueryParameter(query url.Values) (plugin.NsselectionQueryParameter, er
 		}
 	}
 
-	if query.Get("slice-info-request-for-pdu-session") != "" {
-		logger.Nsselection.Infof("[parseQueryParameter] slice-info-request-for-pdu-session: inn")
-		param.SliceInfoRequestForPduSession = new(models.SliceInfoForPduSession)
-		err = json.NewDecoder(strings.NewReader(
-			query.Get("slice-info-request-for-pdu-session"))).Decode(param.SliceInfoRequestForPduSession)
-		if err != nil {
-			logger.Nsselection.Infof("[parseQueryParameter] Failed to decode slice-info-request-for-pdu-session: %v", err)
+	if val := query.Get("slice-info-request-for-pdu-session"); val != "" {
+		logger.Nsselection.Infof("[parseQueryParameter] Found slice-info-request-for-pdu-session")
+		logger.Nsselection.Infof("[parseQueryParameter] Raw value: %s", val)
+		var raw map[string]any
+		if err = json.Unmarshal([]byte(val), &raw); err != nil {
+			logger.Nsselection.Errorf("[parseQueryParameter] raw JSON unmarshal error: %v", err)
 			return param, err
 		}
+		// Normalize sNssai array → object
+		if snssaiRaw, ok := raw["sNssai"]; ok {
+			if arr, ok := snssaiRaw.([]any); ok && len(arr) > 0 {
+				logger.Nsselection.Infof("[parseQueryParameter] normalizing sNssai array → object")
+				raw["sNssai"] = arr[0]
+			}
+		}
+		normalizedBytes, err := json.Marshal(raw)
+		if err != nil {
+			logger.Nsselection.Errorf("[parseQueryParameter] normalization marshal error: %v", err)
+			return param, err
+		}
+		param.SliceInfoRequestForPduSession = new(models.SliceInfoForPduSession)
+		if err = json.Unmarshal(normalizedBytes, param.SliceInfoRequestForPduSession); err != nil {
+			logger.Nsselection.Errorf("[parseQueryParameter] decode error after normalization: %v", err)
+			logger.Nsselection.Errorf("[parseQueryParameter] normalized JSON was: %s", string(normalizedBytes))
+			return param, err
+		}
+		logger.Nsselection.Infof("[parseQueryParameter] Successfully decoded slice-info-request-for-pdu-session")
 	}
 
 	if query.Get("home-plmn-id") != "" {
