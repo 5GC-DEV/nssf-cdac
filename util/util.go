@@ -76,39 +76,29 @@ func CheckSupportedSnssaiInPlmn(snssai models.Snssai, plmnId models.PlmnId) bool
 		"[CheckSupportedSnssaiInPlmn] Enter: requested S-NSSAI = {SST=%d, SD=%s}, PLMN = {MCC=%s, MNC=%s}",
 		snssai.Sst, snssai.Sd, plmnId.Mcc, plmnId.Mnc,
 	)
-
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
-
 	if CheckStandardSnssai(snssai) {
 		logger.Util.Infof("[CheckSupportedSnssaiInPlmn] S-NSSAI is standard, checking config list...")
-
 		for _, supportedNssaiInPlmn := range factory.NssfConfig.Configuration.SupportedNssaiInPlmnList {
-
 			logger.Util.Infof(
 				"[CheckSupportedSnssaiInPlmn] Checking PLMN in config: {MCC=%s, MNC=%s}",
 				supportedNssaiInPlmn.PlmnId.Mcc,
 				supportedNssaiInPlmn.PlmnId.Mnc,
 			)
-
 			if *supportedNssaiInPlmn.PlmnId == plmnId {
-
 				logger.Util.Infof("[CheckSupportedSnssaiInPlmn] PLMN matched. Checking supported S-NSSAIs...")
-
 				for _, supportedSnssai := range supportedNssaiInPlmn.SupportedSnssaiList {
-
 					logger.Util.Infof(
 						"[CheckSupportedSnssaiInPlmn] Compare requested {SST=%d, SD=%s} with supported {SST=%d, SD=%s}",
 						snssai.Sst, snssai.Sd,
 						supportedSnssai.Sst, supportedSnssai.Sd,
 					)
-
 					if snssai == supportedSnssai {
 						logger.Util.Infof("[CheckSupportedSnssaiInPlmn] Match found — S-NSSAI is supported in PLMN")
 						return true
 					}
 				}
-
 				logger.Util.Warnf(
 					"[CheckSupportedSnssaiInPlmn] No matching S-NSSAI found in PLMN {MCC=%s, MNC=%s}",
 					plmnId.Mcc, plmnId.Mnc,
@@ -117,12 +107,10 @@ func CheckSupportedSnssaiInPlmn(snssai models.Snssai, plmnId models.PlmnId) bool
 			}
 		}
 	}
-
 	logger.Util.Warnf(
 		"[CheckSupportedSnssaiInPlmn] No supported S-NSSAI list found for PLMN {MCC=%s, MNC=%s}",
 		plmnId.Mcc, plmnId.Mnc,
 	)
-
 	return false
 }
 
