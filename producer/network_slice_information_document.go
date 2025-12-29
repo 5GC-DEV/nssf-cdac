@@ -106,9 +106,11 @@ func HandleNSSelectionGet(request *httpwrapper.Request) *httpwrapper.Response {
 	nfId := GetNfIdFromQueryParameters(query)
 
 	if response != nil {
+		logger.Nsselection.Infof("[HandleNSSelectionGet] Response: %+v", response)
 		stats.IncrementNssfNsSelectionsStats(nfType, nfId, "SUCCESS")
 		return httpwrapper.NewResponse(http.StatusOK, nil, response)
 	} else if problemDetails != nil {
+		logger.Nsselection.Infof("[HandleNSSelectionGet] Problem Details: %+v", problemDetails)
 		stats.IncrementNssfNsSelectionsStats(nfType, nfId, "FAILURE")
 		return httpwrapper.NewResponse(int(problemDetails.Status), nil, problemDetails)
 	}
@@ -126,17 +128,17 @@ func NSSelectionGetProcedure(query url.Values) (*models.AuthorizedNetworkSliceIn
 		response       *models.AuthorizedNetworkSliceInfo
 		problemDetails *models.ProblemDetails
 	)
+
+	logger.Nsselection.Infof("[NSSelectionGetProcedure] Entered")
+
 	response = &models.AuthorizedNetworkSliceInfo{}
 	problemDetails = &models.ProblemDetails{}
 
-	// TODO: Record request times of the NF service consumer and response with ProblemDetails of 429 Too Many Requests
-	//       if the consumer has sent too many requests in a configured amount of time
-	// TODO: Check URI length and response with ProblemDetails of 414 URI Too Long if URI is too long
-
 	// Parse query parameter
+	logger.Nsselection.Infof("[NSSelectionGetProcedure] Parsing query parameters: %+v", query)
 	param, err := parseQueryParameter(query)
 	if err != nil {
-		// status = http.StatusBadRequest
+		logger.Nsselection.Infof("[NSSelectionGetProcedure] parseQueryParameter failed: %v", err)
 		problemDetails = &models.ProblemDetails{
 			Title:  util.MALFORMED_REQUEST,
 			Status: http.StatusBadRequest,
@@ -145,10 +147,19 @@ func NSSelectionGetProcedure(query url.Values) (*models.AuthorizedNetworkSliceIn
 		return nil, problemDetails
 	}
 
+	logger.Nsselection.Infof(
+		"[NSSelectionGetProcedure] Parsed param: NfType=%v, NfId=%s, RegReqPresent=%v, PduReqPresent=%v",
+		param.NfType,
+		param.NfId,
+		param.SliceInfoRequestForRegistration != nil,
+		param.SliceInfoRequestForPduSession != nil,
+	)
+
 	// Check permission of NF service consumer
+	logger.Nsselection.Infof("[NSSelectionGetProcedure] Checking NF service consumer permission")
 	err = checkNfServiceConsumer(*param.NfType)
 	if err != nil {
-		// status = http.StatusForbidden
+		logger.Nsselection.Infof("[NSSelectionGetProcedure] Unauthorized consumer: %v", err)
 		problemDetails = &models.ProblemDetails{
 			Title:  util.UNAUTHORIZED_CONSUMER,
 			Status: http.StatusForbidden,
@@ -158,16 +169,24 @@ func NSSelectionGetProcedure(query url.Values) (*models.AuthorizedNetworkSliceIn
 	}
 
 	if param.SliceInfoRequestForRegistration != nil {
-		// Network slice information is requested during the Registration procedure
+		logger.Nsselection.Infof("[NSSelectionGetProcedure] Registration flow selected")
 		status = nsselectionForRegistration(param, response, problemDetails)
 	} else {
-		// Network slice information is requested during the PDU session establishment procedure
+		logger.Nsselection.Infof("[NSSelectionGetProcedure] PDU Session flow selected")
 		status = nsselectionForPduSession(param, response, problemDetails)
 	}
 
+	logger.Nsselection.Infof(
+		"[NSSelectionGetProcedure] Flow completed with status=%d, problemDetails=%+v",
+		status,
+		problemDetails,
+	)
+
 	if status == http.StatusOK {
+		logger.Nsselection.Infof("[NSSelectionGetProcedure] Returning success response")
 		return response, problemDetails
 	} else {
+		logger.Nsselection.Infof("[NSSelectionGetProcedure] Returning failure response with status=%d", status)
 		return response, problemDetails
 	}
 }

@@ -16,6 +16,7 @@ import (
 	"math/rand"
 	"net/http"
 
+	"github.com/omec-project/nssf/logger"
 	"github.com/omec-project/nssf/plugin"
 	"github.com/omec-project/nssf/util"
 	"github.com/omec-project/openapi/models"
@@ -59,6 +60,13 @@ func nsselectionForPduSession(param plugin.NsselectionQueryParameter,
 
 	if param.Tai != nil &&
 		!util.CheckSupportedSnssaiInPlmn(*param.SliceInfoRequestForPduSession.SNssai, *param.Tai.PlmnId) {
+		logger.Nsselection.Infof(
+			"[nsselectionForPduSession] S-NSSAI not supported in PLMN. Requested S-NSSAI={SST=%d, SD=%s}, PLMN={MCC=%s, MNC=%s}",
+			param.SliceInfoRequestForPduSession.SNssai.Sst,
+			param.SliceInfoRequestForPduSession.SNssai.Sd,
+			param.Tai.PlmnId.Mcc,
+			param.Tai.PlmnId.Mnc,
+		)
 		// Return ProblemDetails indicating S-NSSAI is not supported
 		// TODO: Based on TS 23.501 V15.2.0, if the Requested NSSAI includes an S-NSSAI that is not valid in the
 		//       Serving PLMN, the NSSF may derive the Configured NSSAI for Serving PLMN
