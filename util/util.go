@@ -44,11 +44,30 @@ func Contain(target interface{}, slice interface{}) bool {
 func CheckSupportedHplmn(homePlmnId models.PlmnId) bool {
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
+
+	// 1. Check Mapping List (Existing logic)
 	for _, mappingFromPlmn := range factory.NssfConfig.Configuration.MappingListFromPlmn {
 		if *mappingFromPlmn.HomePlmnId == homePlmnId {
 			return true
 		}
 	}
+
+	// 2. [FIX] Check Supported S-NSSAIs in PLMN List
+	// This covers the case where Slices are added dynamically (e.g. via GRPC)
+	// but no specific mapping or whitelist entry was created.
+	for _, supportedNssaiInPlmn := range factory.NssfConfig.Configuration.SupportedNssaiInPlmnList {
+		if *supportedNssaiInPlmn.PlmnId == homePlmnId {
+			return true
+		}
+	}
+
+	// 3. [FIX] Check Explicit Supported PLMN List (Whitelist)
+	for _, supportedPlmn := range factory.NssfConfig.Configuration.SupportedPlmnList {
+		if supportedPlmn.Mcc == homePlmnId.Mcc && supportedPlmn.Mnc == homePlmnId.Mnc {
+			return true
+		}
+	}
+
 	logger.Util.Warnf("no Home PLMN %+v in NSSF configuration", homePlmnId)
 	return false
 }
