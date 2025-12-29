@@ -78,20 +78,13 @@ func CheckSupportedHplmn(homePlmnId models.PlmnId) bool {
 func CheckSupportedTa(tai models.Tai) bool {
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
-
-	// 1. Check Global TaList (Strict & Hex-Relaxed Match)
+	// 1. Check Global TaList (Primary Check)
 	for _, taConfig := range factory.NssfConfig.Configuration.TaList {
-		if taConfig.Tai == nil {
-			continue
-		}
-		if compareTai(*taConfig.Tai, tai) {
+		if taConfig.Tai != nil && compareTai(*taConfig.Tai, tai) {
 			return true
 		}
 	}
-
-	// 2. [FIX] Check AMF List (Fallback)
-	// Dynamic GRPC configuration often updates the AMF List with TAIs but misses the global TaList.
-	// We check if any AMF supports this TAI.
+	// 2. Check AMF List (Secondary Check)
 	for _, amfConfig := range factory.NssfConfig.Configuration.AmfList {
 		for _, supportedData := range amfConfig.SupportedNssaiAvailabilityData {
 			if supportedData.Tai != nil && compareTai(*supportedData.Tai, tai) {
@@ -99,7 +92,20 @@ func CheckSupportedTa(tai models.Tai) bool {
 			}
 		}
 	}
-	// Log the failure details
+	// 3. [FIX] PLMN Fallback
+	// If the exact TA is not explicitly listed (common in dynamic GRPC updates),
+	// but the PLMN is supported and has Slices configured, we allow it.
+	for _, supportedNssaiInPlmn := range factory.NssfConfig.Configuration.SupportedNssaiInPlmnList {
+		if supportedNssaiInPlmn.PlmnId != nil &&
+			supportedNssaiInPlmn.PlmnId.Mcc == tai.PlmnId.Mcc &&
+			supportedNssaiInPlmn.PlmnId.Mnc == tai.PlmnId.Mnc {
+
+			// Optional: Only log this in debug mode to avoid noise
+			// logger.Util.Infof("TA %v allowed based on Supported PLMN fallback", tai)
+			return true
+		}
+	}
+
 	e, err := json.Marshal(tai)
 	if err != nil {
 		logger.Util.Errorf("marshal error in CheckSupportedTa: %+v", err)
