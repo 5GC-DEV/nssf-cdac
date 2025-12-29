@@ -69,7 +69,8 @@ func parseQueryParameter(query url.Values) (plugin.NsselectionQueryParameter, er
 				raw["sNssai"] = arr[0]
 			}
 		}
-		normalizedBytes, err := json.Marshal(raw)
+		var normalizedBytes []byte
+		normalizedBytes, err = json.Marshal(raw)
 		if err != nil {
 			logger.Nsselection.Errorf("[parseQueryParameter] normalization marshal error: %v", err)
 			return param, err
