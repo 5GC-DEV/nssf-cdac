@@ -39,8 +39,18 @@ func nsselectionForPduSession(param plugin.NsselectionQueryParameter,
 ) int {
 	var status int
 	if param.HomePlmnId != nil {
+		logger.Nsselection.Infof("[nsselectionForPduSession] --inn----1")
 		// Check whether UE's Home PLMN is supported when UE is a roamer
 		if !util.CheckSupportedHplmn(*param.HomePlmnId) {
+			logger.Nsselection.Infof(
+				"[nsselectionForPduSession]-CheckSupportedHplmn-HomePlmnId S-NSSAI not supported in PLMN. Requested S-NSSAI={SST=%d, SD=%s}, PLMN={MCC=%s, MNC=%s}  Home PLMN={MCC=%s, MNC=%s}",
+				param.SliceInfoRequestForPduSession.SNssai.Sst,
+				param.SliceInfoRequestForPduSession.SNssai.Sd,
+				param.Tai.PlmnId.Mcc,
+				param.Tai.PlmnId.Mnc,
+				param.HomePlmnId.Mcc,
+				param.HomePlmnId.Mnc,
+			)
 			authorizedNetworkSliceInfo.RejectedNssaiInPlmn = append(authorizedNetworkSliceInfo.RejectedNssaiInPlmn, *param.SliceInfoRequestForPduSession.SNssai)
 
 			status = http.StatusOK
@@ -49,8 +59,15 @@ func nsselectionForPduSession(param plugin.NsselectionQueryParameter,
 	}
 
 	if param.Tai != nil {
+		logger.Nsselection.Infof("[nsselectionForPduSession] --inn----2")
 		// Check whether UE's current TA is supported when UE provides TAI
 		if !util.CheckSupportedTa(*param.Tai) {
+			logger.Nsselection.Infof(
+				"[nsselectionForPduSession]-CheckSupportedTa S-NSSAI not supported in PLMN. Requested S-NSSAI={SST=%d, SD=%s}, PLMN={MCC=%s, MNC=%s}",
+				param.SliceInfoRequestForPduSession.SNssai.Sst,
+				param.SliceInfoRequestForPduSession.SNssai.Sd,
+				param.Tai.PlmnId.Mcc,
+				param.Tai.PlmnId.Mnc)
 			authorizedNetworkSliceInfo.RejectedNssaiInTa = append(authorizedNetworkSliceInfo.RejectedNssaiInTa, *param.SliceInfoRequestForPduSession.SNssai)
 
 			status = http.StatusOK
@@ -61,7 +78,7 @@ func nsselectionForPduSession(param plugin.NsselectionQueryParameter,
 	if param.Tai != nil &&
 		!util.CheckSupportedSnssaiInPlmn(*param.SliceInfoRequestForPduSession.SNssai, *param.Tai.PlmnId) {
 		logger.Nsselection.Infof(
-			"[nsselectionForPduSession] S-NSSAI not supported in PLMN. Requested S-NSSAI={SST=%d, SD=%s}, PLMN={MCC=%s, MNC=%s}",
+			"[nsselectionForPduSession] --CheckSupportedSnssaiInPlmn-----S-NSSAI not supported in PLMN. Requested S-NSSAI={SST=%d, SD=%s}, PLMN={MCC=%s, MNC=%s}",
 			param.SliceInfoRequestForPduSession.SNssai.Sst,
 			param.SliceInfoRequestForPduSession.SNssai.Sd,
 			param.Tai.PlmnId.Mcc,
@@ -82,6 +99,14 @@ func nsselectionForPduSession(param plugin.NsselectionQueryParameter,
 	}
 
 	if param.HomePlmnId != nil {
+		logger.Nsselection.Infof("[nsselectionForPduSession] --inn----3")
+		logger.Nsselection.Infof(
+			"[nsselectionForPduSession] --HomePlmnId----12 S-NSSAI not supported in PLMN. Requested S-NSSAI={SST=%d, SD=%s}, PLMN={MCC=%s, MNC=%s} ",
+			param.SliceInfoRequestForPduSession.SNssai.Sst,
+			param.SliceInfoRequestForPduSession.SNssai.Sd,
+			param.Tai.PlmnId.Mcc,
+			param.Tai.PlmnId.Mnc,
+		)
 		if param.SliceInfoRequestForPduSession.RoamingIndication == models.RoamingIndication_NON_ROAMING {
 			problemDetail := "`home-plmn-id` is provided, which contradicts `roamingIndication`:'NON_ROAMING'"
 			*problemDetails = models.ProblemDetails{
@@ -101,6 +126,13 @@ func nsselectionForPduSession(param plugin.NsselectionQueryParameter,
 		}
 	} else {
 		if param.SliceInfoRequestForPduSession.RoamingIndication != models.RoamingIndication_NON_ROAMING {
+			logger.Nsselection.Infof(
+				"[nsselectionForPduSession] --RoamingIndication----22 S-NSSAI not supported in PLMN. Requested S-NSSAI={SST=%d, SD=%s}, PLMN={MCC=%s, MNC=%s} ",
+				param.SliceInfoRequestForPduSession.SNssai.Sst,
+				param.SliceInfoRequestForPduSession.SNssai.Sd,
+				param.Tai.PlmnId.Mcc,
+				param.Tai.PlmnId.Mnc,
+			)
 			problemDetail := fmt.Sprintf("`home-plmn-id` is not provided, which contradicts `roamingIndication`:'%s'",
 				string(param.SliceInfoRequestForPduSession.RoamingIndication))
 			*problemDetails = models.ProblemDetails{
@@ -121,6 +153,7 @@ func nsselectionForPduSession(param plugin.NsselectionQueryParameter,
 	}
 
 	if param.Tai != nil && !util.CheckSupportedSnssaiInTa(*param.SliceInfoRequestForPduSession.SNssai, *param.Tai) {
+		logger.Nsselection.Infof("[nsselectionForPduSession] --inn----333")
 		// Requested S-NSSAI does not supported in UE's current TA
 		// Add it to Rejected NSSAI in TA
 		authorizedNetworkSliceInfo.RejectedNssaiInTa = append(authorizedNetworkSliceInfo.RejectedNssaiInTa, *param.SliceInfoRequestForPduSession.SNssai)
@@ -131,8 +164,10 @@ func nsselectionForPduSession(param plugin.NsselectionQueryParameter,
 	nsiInformationList := util.GetNsiInformationListFromConfig(*param.SliceInfoRequestForPduSession.SNssai)
 
 	if nsiInformationList == nil {
+		logger.Nsselection.Infof("[nsselectionForPduSession] --inn----444")
 		*authorizedNetworkSliceInfo = models.AuthorizedNetworkSliceInfo{}
 	} else {
+		logger.Nsselection.Infof("[nsselectionForPduSession] --inn----5555")
 		nsiInformation := selectNsiInformation(nsiInformationList)
 		authorizedNetworkSliceInfo.NsiInformation = new(models.NsiInformation)
 		*authorizedNetworkSliceInfo.NsiInformation = nsiInformation
