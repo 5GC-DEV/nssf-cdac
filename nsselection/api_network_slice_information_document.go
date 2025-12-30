@@ -40,6 +40,13 @@ func HTTPNetworkSliceInformationDocument(c *gin.Context) {
 		}
 		c.JSON(http.StatusInternalServerError, problemDetails)
 	} else {
-		c.Data(rsp.Status, "application/json", responseBody)
+		// [FIX] Dynamically set Content-Type based on Status Code
+		// 3GPP TS 29.500: Error responses (4xx/5xx) must be "application/problem+json"
+		contentType := "application/json"
+		if rsp.Status >= 400 {
+			contentType = "application/problem+json"
+		}
+
+		c.Data(rsp.Status, contentType, responseBody)
 	}
 }
