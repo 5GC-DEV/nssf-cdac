@@ -214,7 +214,7 @@ func NSSelectionGetProcedure(query url.Values) (*models.AuthorizedNetworkSliceIn
 		return response, problemDetails
 	} else {
 		logger.Nsselection.Infof("[NSSelectionGetProcedure] Returning failure response with status=%d", status)
-		return response, problemDetails
+		return nil, problemDetails
 	}
 }
 
