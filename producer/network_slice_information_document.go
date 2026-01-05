@@ -180,9 +180,9 @@ func NSSelectionGetProcedure(query url.Values) (*models.AuthorizedNetworkSliceIn
 	}
 
 	if status == http.StatusOK {
-		return response, nil
+		return response, problemDetails
 	} else {
-		return nil, problemDetails
+		return response, problemDetails
 	}
 }
 
