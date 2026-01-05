@@ -42,7 +42,13 @@ func nsselectionForPduSession(param plugin.NsselectionQueryParameter,
 		if !util.CheckSupportedHplmn(*param.HomePlmnId) {
 			authorizedNetworkSliceInfo.RejectedNssaiInPlmn = append(authorizedNetworkSliceInfo.RejectedNssaiInPlmn, *param.SliceInfoRequestForPduSession.SNssai)
 
-			status = http.StatusOK
+			*problemDetails = models.ProblemDetails{
+				Title:  util.UNSUPPORTED_RESOURCE,
+				Status: http.StatusForbidden,
+				Detail: "Home PLMN is not supported",
+				Cause:  "SNSSAI_NOT_SUPPORTED",
+			}
+			status = http.StatusForbidden
 			return status
 		}
 	}

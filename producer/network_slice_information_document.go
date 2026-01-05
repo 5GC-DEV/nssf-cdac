@@ -52,11 +52,25 @@ func parseQueryParameter(query url.Values) (plugin.NsselectionQueryParameter, er
 		}
 	}
 
-	if query.Get("slice-info-request-for-pdu-session") != "" {
-		param.SliceInfoRequestForPduSession = new(models.SliceInfoForPduSession)
-		err = json.NewDecoder(strings.NewReader(
-			query.Get("slice-info-request-for-pdu-session"))).Decode(param.SliceInfoRequestForPduSession)
+	if val := query.Get("slice-info-request-for-pdu-session"); val != "" {
+		var raw map[string]any
+		if err = json.Unmarshal([]byte(val), &raw); err != nil {
+			logger.Nsselection.Errorf("[parseQueryParameter] raw JSON unmarshal error: %v", err)
+			return param, err
+		}
+		// Normalize sNssai array → object conversion
+		if snssaiRaw, ok := raw["sNssai"]; ok {
+			if arr, ok := snssaiRaw.([]any); ok && len(arr) > 0 {
+				raw["sNssai"] = arr[0]
+			}
+		}
+		var normalizedBytes []byte
+		normalizedBytes, err = json.Marshal(raw)
 		if err != nil {
+			return param, err
+		}
+		param.SliceInfoRequestForPduSession = new(models.SliceInfoForPduSession)
+		if err = json.Unmarshal(normalizedBytes, param.SliceInfoRequestForPduSession); err != nil {
 			return param, err
 		}
 	}
