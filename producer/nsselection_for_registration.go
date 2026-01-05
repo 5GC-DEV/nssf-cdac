@@ -30,8 +30,19 @@ func useDefaultSubscribedSnssai(
 		mappingOfSnssai = util.GetMappingOfPlmnFromConfig(*param.HomePlmnId)
 
 		if mappingOfSnssai == nil {
-			logger.Nsselection.Warnf("no S-NSSAI mapping of UE's HPLMN %+v in NSSF configuration", *param.HomePlmnId)
-			return
+			// Allow implicit mapping if Home PLMN matches Serving PLMN (Non-Roaming).
+			// Prevents valid local requests from being rejected due to missing mapping config.
+			isSamePlmn := false
+			if param.Tai != nil &&
+				param.Tai.PlmnId.Mcc == param.HomePlmnId.Mcc &&
+				param.Tai.PlmnId.Mnc == param.HomePlmnId.Mnc {
+				isSamePlmn = true
+			}
+
+			if !isSamePlmn {
+				logger.Nsselection.Warnf("no S-NSSAI mapping of UE's HPLMN %+v in NSSF configuration", *param.HomePlmnId)
+				return
+			}
 		}
 	}
 

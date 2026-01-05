@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
+	"strings"
 
 	"github.com/omec-project/nssf/factory"
 	"github.com/omec-project/nssf/logger"
@@ -44,8 +46,16 @@ func Contain(target interface{}, slice interface{}) bool {
 func CheckSupportedHplmn(homePlmnId models.PlmnId) bool {
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
+
+	// 1. Check Static Mapping
 	for _, mappingFromPlmn := range factory.NssfConfig.Configuration.MappingListFromPlmn {
 		if *mappingFromPlmn.HomePlmnId == homePlmnId {
+			return true
+		}
+	}
+	// 2. Check Dynamic Config (GRPC) - Fixes "no Home PLMN" warning
+	for _, supportedNssaiInPlmn := range factory.NssfConfig.Configuration.SupportedNssaiInPlmnList {
+		if *supportedNssaiInPlmn.PlmnId == homePlmnId {
 			return true
 		}
 	}
@@ -53,18 +63,47 @@ func CheckSupportedHplmn(homePlmnId models.PlmnId) bool {
 	return false
 }
 
+// Helper to compare TAI handles Hex vs Decimal mismatch (0x000001 vs 1)
+func compareTai(configTai, reqTai models.Tai) bool {
+	if configTai.PlmnId.Mcc != reqTai.PlmnId.Mcc || configTai.PlmnId.Mnc != reqTai.PlmnId.Mnc {
+		return false
+	}
+	// Normalize Hex strings
+	cfgTac := strings.TrimPrefix(configTai.Tac, "0x")
+	reqTac := strings.TrimPrefix(reqTai.Tac, "0x")
+
+	// Try numeric comparison
+	cfgVal, err1 := strconv.ParseInt(cfgTac, 16, 64)
+	reqVal, err2 := strconv.ParseInt(reqTac, 16, 64)
+	if err1 == nil && err2 == nil && cfgVal == reqVal {
+		return true
+	}
+	return cfgTac == reqTac
+}
+
 // Check whether UE's current TA is configured/supported
 func CheckSupportedTa(tai models.Tai) bool {
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
+
+	// 1. Check Global List
 	for _, taConfig := range factory.NssfConfig.Configuration.TaList {
-		if reflect.DeepEqual(*taConfig.Tai, tai) {
+		if taConfig.Tai != nil && compareTai(*taConfig.Tai, tai) {
 			return true
 		}
 	}
+	// 2. Check Dynamic AMF List (GRPC Config usually lands here)
+	for _, amfConfig := range factory.NssfConfig.Configuration.AmfList {
+		for _, supportedData := range amfConfig.SupportedNssaiAvailabilityData {
+			if supportedData.Tai != nil && compareTai(*supportedData.Tai, tai) {
+				return true
+			}
+		}
+	}
+
 	e, err := json.Marshal(tai)
 	if err != nil {
-		logger.Util.Errorf("marshal error in CheckSupportedTa: %+v", err)
+		logger.Util.Errorf("marshal error: %+v", err)
 	}
 	logger.Util.Warnf("no TA %s in NSSF configuration", e)
 	return false
@@ -128,25 +167,31 @@ func CheckSupportedNssaiInPlmn(nssai []models.Snssai, plmnId models.PlmnId) bool
 func CheckSupportedSnssaiInTa(snssai models.Snssai, tai models.Tai) bool {
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
+
+	// 1. Check Global List
 	for _, taConfig := range factory.NssfConfig.Configuration.TaList {
-		if reflect.DeepEqual(*taConfig.Tai, tai) {
+		if taConfig.Tai != nil && compareTai(*taConfig.Tai, tai) {
 			for _, supportedSnssai := range taConfig.SupportedSnssaiList {
 				if supportedSnssai == snssai {
 					return true
 				}
 			}
-			return false
+		}
+	}
+	// 2. Check Dynamic AMF List
+	for _, amfConfig := range factory.NssfConfig.Configuration.AmfList {
+		for _, supportedData := range amfConfig.SupportedNssaiAvailabilityData {
+			if supportedData.Tai != nil && compareTai(*supportedData.Tai, tai) {
+				for _, s := range supportedData.SupportedSnssaiList {
+					if s == snssai {
+						return true
+					}
+				}
+			}
 		}
 	}
 	return false
 
-	// // Check supported S-NSSAI in AmfList instead of TaList
-	// for _, amfConfig := range factory.NssfConfig.Configuration.AmfList {
-	//     if checkSupportedNssaiAvailabilityData(snssai, tai, amfConfig.SupportedNssaiAvailabilityData) == true {
-	//         return true
-	//     }
-	// }
-	// return false
 }
 
 // Check whether S-NSSAI is in SupportedNssaiAvailabilityData under the given TAI
