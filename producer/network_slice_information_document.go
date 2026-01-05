@@ -164,12 +164,11 @@ func NSSelectionGetProcedure(query url.Values) (*models.AuthorizedNetworkSliceIn
 		// Network slice information is requested during the PDU session establishment procedure
 		status = nsselectionForPduSession(param, response, problemDetails)
 	}
-
-	if status == http.StatusOK {
-		return response, problemDetails
-	} else {
-		return response, problemDetails
+	//Error handling
+	if status != http.StatusOK {
+		return nil, problemDetails
 	}
+	return response, nil
 }
 
 func GetNfTypeFromQueryParameters(query url.Values) (nfType string) {

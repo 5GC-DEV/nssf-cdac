@@ -40,6 +40,12 @@ func HTTPNetworkSliceInformationDocument(c *gin.Context) {
 		}
 		c.JSON(http.StatusInternalServerError, problemDetails)
 	} else {
-		c.Data(rsp.Status, "application/json", responseBody)
+		// Spec mandates 'application/problem+json' for 4xx/5xx responses.
+		contentType := "application/json"
+		if rsp.Status >= 400 {
+			contentType = "application/problem+json"
+		}
+
+		c.Data(rsp.Status, contentType, responseBody)
 	}
 }
