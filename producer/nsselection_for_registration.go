@@ -30,8 +30,21 @@ func useDefaultSubscribedSnssai(
 		mappingOfSnssai = util.GetMappingOfPlmnFromConfig(*param.HomePlmnId)
 
 		if mappingOfSnssai == nil {
-			logger.Nsselection.Warnf("no S-NSSAI mapping of UE's HPLMN %+v in NSSF configuration", *param.HomePlmnId)
-			return
+			// If no mapping found, check if HPLMN matches Serving PLMN.
+			// If they are the same, we don't strictly need a mapping object, we can proceed.
+			// If TAI is present, check if PLMN ID matches Home PLMN ID
+			isSamePlmn := false
+			if param.Tai != nil &&
+				param.Tai.PlmnId.Mcc == param.HomePlmnId.Mcc &&
+				param.Tai.PlmnId.Mnc == param.HomePlmnId.Mnc {
+				isSamePlmn = true
+			}
+
+			if !isSamePlmn {
+				logger.Nsselection.Warnf("no S-NSSAI mapping of UE's HPLMN %+v in NSSF configuration", *param.HomePlmnId)
+				return
+			}
+			// If it is the same PLMN, we proceed without 'mappingOfSnssai' (it stays nil/empty)
 		}
 	}
 
@@ -169,6 +182,10 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 	if param.HomePlmnId != nil {
 		// Check whether UE's Home PLMN is supported when UE is a roamer
 		if !util.CheckSupportedHplmn(*param.HomePlmnId) {
+			// [FIX] If Home PLMN is not supported, we cannot select slices.
+			// Return 403 Forbidden instead of 200 OK.
+			logger.Nsselection.Warnf("Home PLMN %+v not supported. Returning 403.", *param.HomePlmnId)
+
 			authorizedNetworkSliceInfo.RejectedNssaiInPlmn = append(authorizedNetworkSliceInfo.RejectedNssaiInPlmn, param.SliceInfoRequestForRegistration.RequestedNssai...)
 
 			*problemDetails = models.ProblemDetails{
@@ -177,22 +194,31 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 				Detail: "Home PLMN is not supported",
 				Cause:  "SNSSAI_NOT_SUPPORTED",
 			}
-			return http.StatusForbidden
+
+			status = http.StatusForbidden
+			return status
 		}
 	}
 
 	if param.Tai != nil {
 		// Check whether UE's current TA is supported when UE provides TAI
 		if !util.CheckSupportedTa(*param.Tai) {
+			// [FIX] TA is not supported. We must return 403, not 200.
+			logger.Nsselection.Warnf("TA %+v not supported. Returning 403.", *param.Tai)
+
 			authorizedNetworkSliceInfo.RejectedNssaiInTa = append(authorizedNetworkSliceInfo.RejectedNssaiInTa, param.SliceInfoRequestForRegistration.RequestedNssai...)
 
+			// Populate Error Details
 			*problemDetails = models.ProblemDetails{
 				Title:  util.UNSUPPORTED_RESOURCE,
 				Status: http.StatusForbidden,
 				Detail: "Tracking Area (TA) is not supported",
 				Cause:  "SNSSAI_NOT_SUPPORTED",
 			}
-			return http.StatusForbidden
+
+			// Return 403
+			status = http.StatusForbidden
+			return status
 		}
 	}
 
@@ -429,9 +455,12 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 			setConfiguredNssai(param, authorizedNetworkSliceInfo)
 		}
 	}
-	// If the NSSF cannot determine any Allowed or Configured S-NSSAI (e.g. Unsupported SST),
-	// it MUST return 403 Forbidden (TS 29.531) instead of an empty 200 OK.
+
+	// If the NSSF cannot determine any Allowed or Configured S-NSSAI, it must not return 200.
+	// Instead, it should return 403 Forbidden with SNSSAI_NOT_SUPPORTED.
 	if len(authorizedNetworkSliceInfo.AllowedNssaiList) == 0 && len(authorizedNetworkSliceInfo.ConfiguredNssai) == 0 {
+		logger.Nsselection.Warnf("No S-NSSAI allowed or configured for the UE. Returning 403 to avoid empty 200 OK.")
+
 		*problemDetails = models.ProblemDetails{
 			Title:  util.UNSUPPORTED_RESOURCE,
 			Status: http.StatusForbidden,
