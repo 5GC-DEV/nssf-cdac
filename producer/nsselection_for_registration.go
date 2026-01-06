@@ -432,7 +432,6 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 	// If the NSSF cannot determine any Allowed or Configured S-NSSAI (e.g. Unsupported SST),
 	// it MUST return 403 Forbidden (TS 29.531) instead of an empty 200 OK.
 	if len(authorizedNetworkSliceInfo.AllowedNssaiList) == 0 && len(authorizedNetworkSliceInfo.ConfiguredNssai) == 0 {
-
 		*problemDetails = models.ProblemDetails{
 			Title:  util.UNSUPPORTED_RESOURCE,
 			Status: http.StatusForbidden,

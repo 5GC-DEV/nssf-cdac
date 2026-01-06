@@ -164,7 +164,7 @@ func NSSelectionGetProcedure(query url.Values) (*models.AuthorizedNetworkSliceIn
 		// Network slice information is requested during the PDU session establishment procedure
 		status = nsselectionForPduSession(param, response, problemDetails)
 	}
-	//Error handling
+	// Error handling
 	if status != http.StatusOK {
 		return nil, problemDetails
 	}
