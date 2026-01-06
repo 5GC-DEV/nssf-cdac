@@ -191,7 +191,6 @@ func CheckSupportedSnssaiInTa(snssai models.Snssai, tai models.Tai) bool {
 		}
 	}
 	return false
-
 }
 
 // Check whether S-NSSAI is in SupportedNssaiAvailabilityData under the given TAI
