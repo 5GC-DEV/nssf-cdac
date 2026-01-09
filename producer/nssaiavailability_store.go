@@ -28,7 +28,7 @@ import (
 )
 
 // finds any key named "sst" with a string value, and converts it to an integer.
-func fixSstTypeInInterface(data interface{}) {
+func convertSstStrToInt(data interface{}) {
 	switch typedData := data.(type) {
 	case map[string]interface{}:
 		// It's a map, iterate through its keys
@@ -44,13 +44,13 @@ func fixSstTypeInInterface(data interface{}) {
 				}
 			} else {
 				// For any other key, recursively check its value
-				fixSstTypeInInterface(value)
+				convertSstStrToInt(value)
 			}
 		}
 	case []interface{}:
 		// It's a slice, iterate through its elements
 		for _, item := range typedData {
-			fixSstTypeInInterface(item)
+			convertSstStrToInt(item)
 		}
 	}
 }
@@ -173,7 +173,7 @@ func NSSAIAvailabilityPatchProcedure(nssaiAvailabilityUpdateInfo plugin.PatchDoc
 	}
 
 	// Recursively find and fix "sst" fields
-	fixSstTypeInInterface(genericData)
+	convertSstStrToInt(genericData)
 
 	// Marshal the fixed data back into the 'modified' variable
 	modified, err = json.Marshal(genericData)
