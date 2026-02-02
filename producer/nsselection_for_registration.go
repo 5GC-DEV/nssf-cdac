@@ -57,7 +57,7 @@ func useDefaultSubscribedSnssai(
 				targetMapping, found := util.FindMappingWithHomeSnssai(*subscribedSnssai.SubscribedSnssai, mappingOfSnssai)
 
 				if !found {
-					logger.Nsselection.Warnf("no mapping of Subscribed S-NSSAI %+v in PLMN %+v in NSSF configuration",
+					logger.Nsselection.Debugf("no mapping of Subscribed S-NSSAI %+v in PLMN %+v in NSSF configuration",
 						*subscribedSnssai.SubscribedSnssai,
 						*param.HomePlmnId)
 					continue
@@ -255,7 +255,7 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 				targetMapping, found := util.FindMappingWithHomeSnssai(*subscribedSnssai.SubscribedSnssai, mappingOfSnssai)
 
 				if !found {
-					logger.Nsselection.Warnf("no mapping of Subscribed S-NSSAI %+v in PLMN %+v in NSSF configuration",
+					logger.Nsselection.Debugf("no mapping of Subscribed S-NSSAI %+v in PLMN %+v in NSSF configuration",
 						*subscribedSnssai.SubscribedSnssai,
 						*param.HomePlmnId)
 					continue
@@ -288,7 +288,7 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 				targetMapping, found := util.FindMappingWithHomeSnssai(snssai, mappingOfSnssai)
 
 				if !found {
-					logger.Nsselection.Warnf("No mapping of Subscribed S-NSSAI %+v in PLMN %+v in NSSF configuration",
+					logger.Nsselection.Debugf("No mapping of Subscribed S-NSSAI %+v in PLMN %+v in NSSF configuration",
 						snssai,
 						*param.HomePlmnId)
 					continue
