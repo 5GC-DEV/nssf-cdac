@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strconv"
 
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/omec-project/nssf/factory"
@@ -25,6 +26,34 @@ import (
 	"github.com/omec-project/nssf/util"
 	"github.com/omec-project/openapi/models"
 )
+
+// finds any key named "sst" with a string value, and converts it to an integer.
+func convertSstStrToInt(data interface{}) {
+	switch typedData := data.(type) {
+	case map[string]interface{}:
+		// It's a map, iterate through its keys
+		for key, value := range typedData {
+			if key == "sst" {
+				// Found the key we need
+				if sstString, ok := value.(string); ok {
+					// The value is a string, so we need to convert it
+					if sstInt, err := strconv.Atoi(sstString); err == nil {
+						// Conversion successful, replace the string with the integer
+						typedData[key] = sstInt
+					}
+				}
+			} else {
+				// For any other key, recursively check its value
+				convertSstStrToInt(value)
+			}
+		}
+	case []interface{}:
+		// It's a slice, iterate through its elements
+		for _, item := range typedData {
+			convertSstStrToInt(item)
+		}
+	}
+}
 
 // NSSAIAvailability DELETE method
 func NSSAIAvailabilityDeleteProcedure(nfId string) *models.ProblemDetails {
@@ -128,6 +157,31 @@ func NSSAIAvailabilityPatchProcedure(nssaiAvailabilityUpdateInfo plugin.PatchDoc
 			Title:  util.INVALID_REQUEST,
 			Status: http.StatusConflict,
 			Detail: err.Error(),
+		}
+		return nil, problemDetails
+	}
+
+	var genericData []interface{}
+	if err = json.Unmarshal(modified, &genericData); err != nil {
+		// If unmarshal fails here, the JSON is truly malformed.
+		problemDetails = &models.ProblemDetails{
+			Title:  util.MALFORMED_REQUEST,
+			Status: http.StatusBadRequest,
+			Detail: "Failed to parse patched data: " + err.Error(),
+		}
+		return nil, problemDetails
+	}
+
+	// Recursively find and fix "sst" fields
+	convertSstStrToInt(genericData)
+
+	// Marshal the fixed data back into the 'modified' variable
+	modified, err = json.Marshal(genericData)
+	if err != nil {
+		problemDetails = &models.ProblemDetails{
+			Title:  http.StatusText(http.StatusInternalServerError),
+			Status: http.StatusInternalServerError,
+			Detail: "Failed to re-marshal sanitized data: " + err.Error(),
 		}
 		return nil, problemDetails
 	}
