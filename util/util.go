@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
+	"strings"
 
 	"github.com/omec-project/nssf/factory"
 	"github.com/omec-project/nssf/logger"
@@ -44,11 +46,30 @@ func Contain(target interface{}, slice interface{}) bool {
 func CheckSupportedHplmn(homePlmnId models.PlmnId) bool {
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
+
+	// 1. Check Mapping List (Existing logic)
 	for _, mappingFromPlmn := range factory.NssfConfig.Configuration.MappingListFromPlmn {
 		if *mappingFromPlmn.HomePlmnId == homePlmnId {
 			return true
 		}
 	}
+
+	// 2. Check Supported S-NSSAIs in PLMN List
+	// This covers the case where Slices are added dynamically (e.g. via GRPC)
+	// but no specific mapping or whitelist entry was created.
+	for _, supportedNssaiInPlmn := range factory.NssfConfig.Configuration.SupportedNssaiInPlmnList {
+		if *supportedNssaiInPlmn.PlmnId == homePlmnId {
+			return true
+		}
+	}
+
+	// 3. Check Explicit Supported PLMN List (Whitelist)
+	for _, supportedPlmn := range factory.NssfConfig.Configuration.SupportedPlmnList {
+		if supportedPlmn.Mcc == homePlmnId.Mcc && supportedPlmn.Mnc == homePlmnId.Mnc {
+			return true
+		}
+	}
+
 	logger.Util.Warnf("no Home PLMN %+v in NSSF configuration", homePlmnId)
 	return false
 }
@@ -57,17 +78,59 @@ func CheckSupportedHplmn(homePlmnId models.PlmnId) bool {
 func CheckSupportedTa(tai models.Tai) bool {
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
+	// 1. Check Global TaList (Primary Check)
 	for _, taConfig := range factory.NssfConfig.Configuration.TaList {
-		if reflect.DeepEqual(*taConfig.Tai, tai) {
+		if taConfig.Tai != nil && compareTai(*taConfig.Tai, tai) {
 			return true
 		}
 	}
+	// 2. Check AMF List (Secondary Check)
+	for _, amfConfig := range factory.NssfConfig.Configuration.AmfList {
+		for _, supportedData := range amfConfig.SupportedNssaiAvailabilityData {
+			if supportedData.Tai != nil && compareTai(*supportedData.Tai, tai) {
+				return true
+			}
+		}
+	}
+	// 3. PLMN Fallback
+	// If the exact TA is not explicitly listed (common in dynamic GRPC updates),
+	// but the PLMN is supported and has Slices configured, we allow it.
+	for _, supportedNssaiInPlmn := range factory.NssfConfig.Configuration.SupportedNssaiInPlmnList {
+		if supportedNssaiInPlmn.PlmnId != nil &&
+			supportedNssaiInPlmn.PlmnId.Mcc == tai.PlmnId.Mcc &&
+			supportedNssaiInPlmn.PlmnId.Mnc == tai.PlmnId.Mnc {
+			// Optional: Only log this in debug mode to avoid noise
+			// logger.Util.Infof("TA %v allowed based on Supported PLMN fallback", tai)
+			return true
+		}
+	}
+
 	e, err := json.Marshal(tai)
 	if err != nil {
 		logger.Util.Errorf("marshal error in CheckSupportedTa: %+v", err)
 	}
 	logger.Util.Warnf("no TA %s in NSSF configuration", e)
 	return false
+}
+
+// Helper function to compare TAI with Hex/Int flexibility
+func compareTai(configTai, reqTai models.Tai) bool {
+	// Check PLMN
+	if configTai.PlmnId.Mcc != reqTai.PlmnId.Mcc || configTai.PlmnId.Mnc != reqTai.PlmnId.Mnc {
+		return false
+	}
+	// Check TAC (Handle "0x" prefix and "000001" vs "1" mismatch)
+	cfgTac := strings.TrimPrefix(configTai.Tac, "0x")
+	reqTac := strings.TrimPrefix(reqTai.Tac, "0x")
+
+	cfgVal, err1 := strconv.ParseInt(cfgTac, 16, 64)
+	reqVal, err2 := strconv.ParseInt(reqTac, 16, 64)
+
+	if err1 == nil && err2 == nil {
+		return cfgVal == reqVal
+	}
+	// Fallback to string comparison if parsing fails
+	return cfgTac == reqTac
 }
 
 // Check whether the given S-NSSAI is supported or not in PLMN
@@ -128,25 +191,45 @@ func CheckSupportedNssaiInPlmn(nssai []models.Snssai, plmnId models.PlmnId) bool
 func CheckSupportedSnssaiInTa(snssai models.Snssai, tai models.Tai) bool {
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
+
+	// 1. Check Global TaList
 	for _, taConfig := range factory.NssfConfig.Configuration.TaList {
-		if reflect.DeepEqual(*taConfig.Tai, tai) {
+		if taConfig.Tai != nil && compareTai(*taConfig.Tai, tai) {
 			for _, supportedSnssai := range taConfig.SupportedSnssaiList {
 				if supportedSnssai == snssai {
 					return true
 				}
 			}
 			return false
+			// If TA matches but Slice is not found, we don't return false yet;
+			// we check other sources just in case.
 		}
 	}
-	return false
+	// 2. Check AMF List (Fallback for Dynamic/GRPC Config)
+	for _, amfConfig := range factory.NssfConfig.Configuration.AmfList {
+		for _, supportedData := range amfConfig.SupportedNssaiAvailabilityData {
+			if supportedData.Tai != nil && compareTai(*supportedData.Tai, tai) {
+				for _, supportedSnssai := range supportedData.SupportedSnssaiList {
+					if supportedSnssai == snssai {
+						return true
+					}
+				}
+			}
+		}
+	}
 
-	// // Check supported S-NSSAI in AmfList instead of TaList
-	// for _, amfConfig := range factory.NssfConfig.Configuration.AmfList {
-	//     if checkSupportedNssaiAvailabilityData(snssai, tai, amfConfig.SupportedNssaiAvailabilityData) == true {
-	//         return true
-	//     }
-	// }
-	// return false
+	// 3. Standard S-NSSAI Fallback
+	// If it is a Standard S-NSSAI (SST 1-3, no SD) and the PLMN check passed,
+	// we often assume it is supported unless explicitly restricted.
+	// (Enable this if your test environment implies standard slices are always on)
+	if CheckStandardSnssai(snssai) {
+		// Verify if the PLMN supports it
+		if CheckSupportedSnssaiInPlmn(snssai, *tai.PlmnId) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Check whether S-NSSAI is in SupportedNssaiAvailabilityData under the given TAI

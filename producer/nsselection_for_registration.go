@@ -30,8 +30,20 @@ func useDefaultSubscribedSnssai(
 		mappingOfSnssai = util.GetMappingOfPlmnFromConfig(*param.HomePlmnId)
 
 		if mappingOfSnssai == nil {
-			logger.Nsselection.Warnf("no S-NSSAI mapping of UE's HPLMN %+v in NSSF configuration", *param.HomePlmnId)
-			return
+			// If no mapping found, check if HPLMN matches Serving PLMN (Roaming Status).
+			// If TAI is present, check if PLMN ID matches Home PLMN ID
+			isSamePlmn := false
+			if param.Tai != nil &&
+				param.Tai.PlmnId.Mcc == param.HomePlmnId.Mcc &&
+				param.Tai.PlmnId.Mnc == param.HomePlmnId.Mnc {
+				isSamePlmn = true
+			}
+
+			if !isSamePlmn {
+				logger.Nsselection.Warnf("no S-NSSAI mapping of UE's HPLMN %+v in NSSF configuration", *param.HomePlmnId)
+				return
+			}
+			// If it is the same PLMN, we proceed without 'mappingOfSnssai' (it stays nil/empty)
 		}
 	}
 
@@ -45,7 +57,7 @@ func useDefaultSubscribedSnssai(
 				targetMapping, found := util.FindMappingWithHomeSnssai(*subscribedSnssai.SubscribedSnssai, mappingOfSnssai)
 
 				if !found {
-					logger.Nsselection.Warnf("no mapping of Subscribed S-NSSAI %+v in PLMN %+v in NSSF configuration",
+					logger.Nsselection.Debugf("no mapping of Subscribed S-NSSAI %+v in PLMN %+v in NSSF configuration",
 						*subscribedSnssai.SubscribedSnssai,
 						*param.HomePlmnId)
 					continue
@@ -169,9 +181,19 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 	if param.HomePlmnId != nil {
 		// Check whether UE's Home PLMN is supported when UE is a roamer
 		if !util.CheckSupportedHplmn(*param.HomePlmnId) {
+			// If Home PLMN is not supported, we cannot select slices.
+			// Return 403 Forbidden instead of 200 OK.
+			logger.Nsselection.Warnf("Home PLMN %+v not supported. Returning 403.", *param.HomePlmnId)
 			authorizedNetworkSliceInfo.RejectedNssaiInPlmn = append(authorizedNetworkSliceInfo.RejectedNssaiInPlmn, param.SliceInfoRequestForRegistration.RequestedNssai...)
 
-			status = http.StatusOK
+			*problemDetails = models.ProblemDetails{
+				Title:  util.UNSUPPORTED_RESOURCE,
+				Status: http.StatusForbidden,
+				Detail: "Home PLMN is not supported",
+				Cause:  "SNSSAI_NOT_SUPPORTED",
+			}
+
+			status = http.StatusForbidden
 			return status
 		}
 	}
@@ -179,9 +201,20 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 	if param.Tai != nil {
 		// Check whether UE's current TA is supported when UE provides TAI
 		if !util.CheckSupportedTa(*param.Tai) {
+			// TA is not supported. We must return 403, not 200.
+			logger.Nsselection.Warnf("TA %+v not supported. Returning 403.", *param.Tai)
 			authorizedNetworkSliceInfo.RejectedNssaiInTa = append(authorizedNetworkSliceInfo.RejectedNssaiInTa, param.SliceInfoRequestForRegistration.RequestedNssai...)
 
-			status = http.StatusOK
+			// Populate Error Details
+			*problemDetails = models.ProblemDetails{
+				Title:  util.UNSUPPORTED_RESOURCE,
+				Status: http.StatusForbidden,
+				Detail: "Tracking Area (TA) is not supported",
+				Cause:  "SNSSAI_NOT_SUPPORTED",
+			}
+
+			// Return 403
+			status = http.StatusForbidden
 			return status
 		}
 	}
@@ -222,7 +255,7 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 				targetMapping, found := util.FindMappingWithHomeSnssai(*subscribedSnssai.SubscribedSnssai, mappingOfSnssai)
 
 				if !found {
-					logger.Nsselection.Warnf("no mapping of Subscribed S-NSSAI %+v in PLMN %+v in NSSF configuration",
+					logger.Nsselection.Debugf("no mapping of Subscribed S-NSSAI %+v in PLMN %+v in NSSF configuration",
 						*subscribedSnssai.SubscribedSnssai,
 						*param.HomePlmnId)
 					continue
@@ -255,7 +288,7 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 				targetMapping, found := util.FindMappingWithHomeSnssai(snssai, mappingOfSnssai)
 
 				if !found {
-					logger.Nsselection.Warnf("No mapping of Subscribed S-NSSAI %+v in PLMN %+v in NSSF configuration",
+					logger.Nsselection.Debugf("No mapping of Subscribed S-NSSAI %+v in PLMN %+v in NSSF configuration",
 						snssai,
 						*param.HomePlmnId)
 					continue
@@ -418,6 +451,21 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 		if param.Tai != nil {
 			setConfiguredNssai(param, authorizedNetworkSliceInfo)
 		}
+	}
+
+	// If the NSSF cannot determine any Allowed or Configured S-NSSAI, it must not return 200.
+	// Instead, it should return 403 Forbidden with SNSSAI_NOT_SUPPORTED.
+	if len(authorizedNetworkSliceInfo.AllowedNssaiList) == 0 && len(authorizedNetworkSliceInfo.ConfiguredNssai) == 0 {
+		logger.Nsselection.Warnf("No S-NSSAI allowed or configured for the UE. Returning 403 to avoid empty 200 OK.")
+
+		*problemDetails = models.ProblemDetails{
+			Title:  util.UNSUPPORTED_RESOURCE,
+			Status: http.StatusForbidden,
+			Detail: "No S-NSSAI found for the provided information",
+			Cause:  "SNSSAI_NOT_SUPPORTED",
+		}
+
+		return http.StatusForbidden
 	}
 
 	status = http.StatusOK
