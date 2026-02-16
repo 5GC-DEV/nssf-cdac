@@ -16,6 +16,7 @@ import (
 	"math/rand"
 	"net/http"
 
+	"github.com/omec-project/nssf/logger"
 	"github.com/omec-project/nssf/plugin"
 	"github.com/omec-project/nssf/util"
 	"github.com/omec-project/openapi/models"
@@ -56,9 +57,20 @@ func nsselectionForPduSession(param plugin.NsselectionQueryParameter,
 	if param.Tai != nil {
 		// Check whether UE's current TA is supported when UE provides TAI
 		if !util.CheckSupportedTa(*param.Tai) {
-			authorizedNetworkSliceInfo.RejectedNssaiInTa = append(authorizedNetworkSliceInfo.RejectedNssaiInTa, *param.SliceInfoRequestForPduSession.SNssai)
+			// TA is not supported. We must return 403, not 200.
+			logger.Nsselection.Warnf("TA %+v not supported. Returning 403.", *param.Tai)
+			authorizedNetworkSliceInfo.RejectedNssaiInTa = append(authorizedNetworkSliceInfo.RejectedNssaiInTa, param.SliceInfoRequestForRegistration.RequestedNssai...)
 
-			status = http.StatusOK
+			// Populate Error Details
+			*problemDetails = models.ProblemDetails{
+				Title:  util.UNSUPPORTED_RESOURCE,
+				Status: http.StatusForbidden,
+				Detail: "Tracking Area (TA) is not supported",
+				Cause:  "SNSSAI_NOT_SUPPORTED",
+			}
+
+			// Return 403
+			status = http.StatusForbidden
 			return status
 		}
 	}
