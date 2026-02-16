@@ -106,7 +106,7 @@ func nsselectionForPduSession(param plugin.NsselectionQueryParameter,
 				},
 			}
 
-			status = http.StatusBadRequest
+			status = http.StatusForbidden
 			return status
 		}
 	} else {
@@ -125,7 +125,7 @@ func nsselectionForPduSession(param plugin.NsselectionQueryParameter,
 				},
 			}
 
-			status = http.StatusBadRequest
+			status = http.StatusForbidden
 			return status
 		}
 	}
