@@ -38,11 +38,8 @@ func nsselectionForPduSession(
 	authorizedNetworkSliceInfo *models.AuthorizedNetworkSliceInfo,
 	problemDetails *models.ProblemDetails,
 ) int {
-
 	logger.Nsselection.Infof("[nsselectionForPduSession] Entered nsselectionForPduSession")
-
 	var status int
-
 	if param.HomePlmnId != nil {
 		logger.Nsselection.Infof("[nsselectionForPduSession] HomePlmnId provided")
 
@@ -86,16 +83,13 @@ func nsselectionForPduSession(
 		!util.CheckSupportedSnssaiInPlmn(
 			*param.SliceInfoRequestForPduSession.SNssai,
 			*param.Tai.PlmnId) {
-
 		logger.Nsselection.Infof("[nsselectionForPduSession] S-NSSAI not supported in PLMN")
-
 		*problemDetails = models.ProblemDetails{
 			Title:  util.UNSUPPORTED_RESOURCE,
 			Status: http.StatusForbidden,
 			Detail: "S-NSSAI in Requested NSSAI is not supported in PLMN",
 			Cause:  "SNSSAI_NOT_SUPPORTED",
 		}
-
 		status = http.StatusForbidden
 		logger.Nsselection.Infof("[nsselectionForPduSession] Returning status: %d", status)
 		return status
@@ -104,11 +98,8 @@ func nsselectionForPduSession(
 	if param.HomePlmnId != nil {
 		if param.SliceInfoRequestForPduSession.RoamingIndication ==
 			models.RoamingIndication_NON_ROAMING {
-
 			logger.Nsselection.Infof("[nsselectionForPduSession] Contradiction: home-plmn-id + NON_ROAMING")
-
 			problemDetail := "`home-plmn-id` is provided, which contradicts `roamingIndication`:'NON_ROAMING'"
-
 			*problemDetails = models.ProblemDetails{
 				Title:  util.INVALID_REQUEST,
 				Status: http.StatusBadRequest,
@@ -120,7 +111,6 @@ func nsselectionForPduSession(
 					},
 				},
 			}
-
 			status = http.StatusBadRequest
 			logger.Nsselection.Infof("[nsselectionForPduSession] Returning status: %d", status)
 			return status
