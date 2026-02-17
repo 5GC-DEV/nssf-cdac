@@ -44,9 +44,8 @@ func nsselectionForPduSession(
 		logger.Nsselection.Infof("[nsselectionForPduSession] HomePlmnId provided")
 		if !util.CheckSupportedHplmn(*param.HomePlmnId) {
 			logger.Nsselection.Infof("[nsselectionForPduSession] Unsupported Home PLMN")
-			authorizedNetworkSliceInfo.RejectedNssaiInPlmn =
-				append(authorizedNetworkSliceInfo.RejectedNssaiInPlmn,
-					*param.SliceInfoRequestForPduSession.SNssai)
+			authorizedNetworkSliceInfo.RejectedNssaiInPlmn = append(authorizedNetworkSliceInfo.RejectedNssaiInPlmn,
+				*param.SliceInfoRequestForPduSession.SNssai)
 			*problemDetails = models.ProblemDetails{
 				Title:  util.UNSUPPORTED_RESOURCE,
 				Status: http.StatusForbidden,
@@ -63,9 +62,8 @@ func nsselectionForPduSession(
 		logger.Nsselection.Infof("[nsselectionForPduSession] TAI provided")
 		if !util.CheckSupportedTa(*param.Tai) {
 			logger.Nsselection.Infof("[nsselectionForPduSession] Unsupported TA")
-			authorizedNetworkSliceInfo.RejectedNssaiInTa =
-				append(authorizedNetworkSliceInfo.RejectedNssaiInTa,
-					*param.SliceInfoRequestForPduSession.SNssai)
+			authorizedNetworkSliceInfo.RejectedNssaiInTa = append(authorizedNetworkSliceInfo.RejectedNssaiInTa,
+				*param.SliceInfoRequestForPduSession.SNssai)
 
 			status = http.StatusOK
 			logger.Nsselection.Infof("[nsselectionForPduSession] Returning status: %d", status)
@@ -139,9 +137,8 @@ func nsselectionForPduSession(
 			*param.SliceInfoRequestForPduSession.SNssai,
 			*param.Tai) {
 		logger.Nsselection.Infof("[nsselectionForPduSession] S-NSSAI not supported in TA")
-		authorizedNetworkSliceInfo.RejectedNssaiInTa =
-			append(authorizedNetworkSliceInfo.RejectedNssaiInTa,
-				*param.SliceInfoRequestForPduSession.SNssai)
+		authorizedNetworkSliceInfo.RejectedNssaiInTa = append(authorizedNetworkSliceInfo.RejectedNssaiInTa,
+			*param.SliceInfoRequestForPduSession.SNssai)
 		status = http.StatusOK
 		logger.Nsselection.Infof("[nsselectionForPduSession] Returning status: %d", status)
 		return status
@@ -149,9 +146,8 @@ func nsselectionForPduSession(
 
 	logger.Nsselection.Infof("[nsselectionForPduSession] Fetching NSI Information from config")
 
-	nsiInformationList :=
-		util.GetNsiInformationListFromConfig(
-			*param.SliceInfoRequestForPduSession.SNssai)
+	nsiInformationList := util.GetNsiInformationListFromConfig(
+		*param.SliceInfoRequestForPduSession.SNssai)
 
 	if nsiInformationList == nil {
 		logger.Nsselection.Infof("[nsselectionForPduSession] No NSI Information found")
