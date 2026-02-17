@@ -45,7 +45,6 @@ func nsselectionForPduSession(
 
 		if !util.CheckSupportedHplmn(*param.HomePlmnId) {
 			logger.Nsselection.Infof("[nsselectionForPduSession] Unsupported Home PLMN")
-
 			authorizedNetworkSliceInfo.RejectedNssaiInPlmn =
 				append(authorizedNetworkSliceInfo.RejectedNssaiInPlmn,
 					*param.SliceInfoRequestForPduSession.SNssai)
@@ -56,7 +55,6 @@ func nsselectionForPduSession(
 				Detail: "Home PLMN is not supported",
 				Cause:  "SNSSAI_NOT_SUPPORTED",
 			}
-
 			status = http.StatusForbidden
 			logger.Nsselection.Infof("[nsselectionForPduSession] Returning status: %d", status)
 			return status
@@ -65,10 +63,8 @@ func nsselectionForPduSession(
 
 	if param.Tai != nil {
 		logger.Nsselection.Infof("[nsselectionForPduSession] TAI provided")
-
 		if !util.CheckSupportedTa(*param.Tai) {
 			logger.Nsselection.Infof("[nsselectionForPduSession] Unsupported TA")
-
 			authorizedNetworkSliceInfo.RejectedNssaiInTa =
 				append(authorizedNetworkSliceInfo.RejectedNssaiInTa,
 					*param.SliceInfoRequestForPduSession.SNssai)
@@ -118,9 +114,7 @@ func nsselectionForPduSession(
 	} else {
 		if param.SliceInfoRequestForPduSession.RoamingIndication !=
 			models.RoamingIndication_NON_ROAMING {
-
 			logger.Nsselection.Infof("[nsselectionForPduSession] Contradiction: roamingIndication without home-plmn-id")
-
 			problemDetail := fmt.Sprintf(
 				"`home-plmn-id` is not provided, which contradicts `roamingIndication`:'%s'",
 				string(param.SliceInfoRequestForPduSession.RoamingIndication))
@@ -136,7 +130,6 @@ func nsselectionForPduSession(
 					},
 				},
 			}
-
 			status = http.StatusBadRequest
 			logger.Nsselection.Infof("[nsselectionForPduSession] Returning status: %d", status)
 			return status
@@ -147,13 +140,10 @@ func nsselectionForPduSession(
 		!util.CheckSupportedSnssaiInTa(
 			*param.SliceInfoRequestForPduSession.SNssai,
 			*param.Tai) {
-
 		logger.Nsselection.Infof("[nsselectionForPduSession] S-NSSAI not supported in TA")
-
 		authorizedNetworkSliceInfo.RejectedNssaiInTa =
 			append(authorizedNetworkSliceInfo.RejectedNssaiInTa,
 				*param.SliceInfoRequestForPduSession.SNssai)
-
 		status = http.StatusOK
 		logger.Nsselection.Infof("[nsselectionForPduSession] Returning status: %d", status)
 		return status
