@@ -42,13 +42,11 @@ func nsselectionForPduSession(
 	var status int
 	if param.HomePlmnId != nil {
 		logger.Nsselection.Infof("[nsselectionForPduSession] HomePlmnId provided")
-
 		if !util.CheckSupportedHplmn(*param.HomePlmnId) {
 			logger.Nsselection.Infof("[nsselectionForPduSession] Unsupported Home PLMN")
 			authorizedNetworkSliceInfo.RejectedNssaiInPlmn =
 				append(authorizedNetworkSliceInfo.RejectedNssaiInPlmn,
 					*param.SliceInfoRequestForPduSession.SNssai)
-
 			*problemDetails = models.ProblemDetails{
 				Title:  util.UNSUPPORTED_RESOURCE,
 				Status: http.StatusForbidden,
