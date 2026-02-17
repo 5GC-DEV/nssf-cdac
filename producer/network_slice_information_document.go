@@ -174,20 +174,17 @@ func NSSelectionGetProcedure(query url.Values) (*models.AuthorizedNetworkSliceIn
 	if param.SliceInfoRequestForRegistration != nil {
 		// Network slice information is requested during the Registration procedure
 		status = nsselectionForRegistration(param, response, problemDetails)
-		logger.Nsselection.Errorf("[NSSelectionGetProcedure] status from if : %v", status)
+		logger.Nsselection.Infoln("[NSSelectionGetProcedure] status from if : %v", status)
 	} else {
 		// Network slice information is requested during the PDU session establishment procedure
 		status = nsselectionForPduSession(param, response, problemDetails)
-		logger.Nsselection.Errorf("[NSSelectionGetProcedure] status from else: %v", status)
+		logger.Nsselection.Infoln("[NSSelectionGetProcedure] status from else: %v", status)
 	}
 
-	if status == http.StatusOK {
-		logger.Nsselection.Infof("[NSSelectionGetProcedure] Returning success response")
-		return response, problemDetails
-	} else {
-		logger.Nsselection.Infof("[NSSelectionGetProcedure] Returning failure response with status=%d", status)
+	if status != http.StatusOK {
 		return nil, problemDetails
 	}
+	return response, nil
 }
 
 func GetNfTypeFromQueryParameters(query url.Values) (nfType string) {
