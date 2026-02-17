@@ -94,7 +94,7 @@ func nsselectionForPduSession(
 			problemDetail := "`home-plmn-id` is provided, which contradicts `roamingIndication`:'NON_ROAMING'"
 			*problemDetails = models.ProblemDetails{
 				Title:  util.INVALID_REQUEST,
-				Status: http.StatusBadRequest,
+				Status: http.StatusForbidden,
 				Detail: problemDetail,
 				InvalidParams: []models.InvalidParam{
 					{
@@ -103,7 +103,7 @@ func nsselectionForPduSession(
 					},
 				},
 			}
-			status = http.StatusBadRequest
+			status = http.StatusForbidden
 			logger.Nsselection.Infof("[nsselectionForPduSession] Returning status: %d", status)
 			return status
 		}
