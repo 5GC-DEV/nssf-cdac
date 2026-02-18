@@ -53,7 +53,7 @@ func nsselectionForPduSession(
 				Cause:  "SNSSAI_NOT_SUPPORTED",
 			}
 			status = http.StatusForbidden
-			logger.Nsselection.Infof("[nsselectionForPduSession] Returning status: %d", status)
+			logger.Nsselection.Infof("[nsselectionForPduSession] ----1  Returning status: %d", status)
 			return status
 		}
 	}
@@ -66,7 +66,7 @@ func nsselectionForPduSession(
 				*param.SliceInfoRequestForPduSession.SNssai)
 
 			status = http.StatusOK
-			logger.Nsselection.Infof("[nsselectionForPduSession] Returning status: %d", status)
+			logger.Nsselection.Infof("[nsselectionForPduSession] ----2  Returning status: %d", status)
 			return status
 		}
 	}
@@ -83,7 +83,7 @@ func nsselectionForPduSession(
 			Cause:  "SNSSAI_NOT_SUPPORTED",
 		}
 		status = http.StatusForbidden
-		logger.Nsselection.Infof("[nsselectionForPduSession] Returning status: %d", status)
+		logger.Nsselection.Infof("[nsselectionForPduSession] ----3  Returning status: %d", status)
 		return status
 	}
 
@@ -104,7 +104,7 @@ func nsselectionForPduSession(
 				},
 			}
 			status = http.StatusForbidden
-			logger.Nsselection.Infof("[nsselectionForPduSession] Returning status: %d", status)
+			logger.Nsselection.Infof("[nsselectionForPduSession] ----4 Returning status: %d", status)
 			return status
 		}
 	} else {
@@ -127,7 +127,7 @@ func nsselectionForPduSession(
 				},
 			}
 			status = http.StatusBadRequest
-			logger.Nsselection.Infof("[nsselectionForPduSession] Returning status: %d", status)
+			logger.Nsselection.Infof("[nsselectionForPduSession] ----5 Returning status: %d", status)
 			return status
 		}
 	}
@@ -140,7 +140,7 @@ func nsselectionForPduSession(
 		authorizedNetworkSliceInfo.RejectedNssaiInTa = append(authorizedNetworkSliceInfo.RejectedNssaiInTa,
 			*param.SliceInfoRequestForPduSession.SNssai)
 		status = http.StatusOK
-		logger.Nsselection.Infof("[nsselectionForPduSession] Returning status: %d", status)
+		logger.Nsselection.Infof("[nsselectionForPduSession] Returning status:---6 %d", status)
 		return status
 	}
 
@@ -159,6 +159,6 @@ func nsselectionForPduSession(
 		*authorizedNetworkSliceInfo.NsiInformation = nsiInformation
 	}
 
-	logger.Nsselection.Infof("[nsselectionForPduSession] Returning status: %d", http.StatusOK)
+	logger.Nsselection.Infof("[nsselectionForPduSession] Returning status:---7 %d", http.StatusOK)
 	return http.StatusOK
 }
