@@ -96,6 +96,7 @@ func nsselectionForPduSession(
 				Title:  util.INVALID_REQUEST,
 				Status: http.StatusForbidden,
 				Detail: problemDetail,
+				Cause:  "SNSSAI_NOT_SUPPORTED",
 				InvalidParams: []models.InvalidParam{
 					{
 						Param:  "home-plmn-id",
