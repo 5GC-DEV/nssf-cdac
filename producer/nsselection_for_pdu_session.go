@@ -71,20 +71,23 @@ func nsselectionForPduSession(
 		}
 	}
 
-	if param.Tai != nil &&
-		!util.CheckSupportedSnssaiInPlmn(
+	if param.Tai != nil {
+		logger.Nsselection.Infof("[nsselectionForPduSession] TAI provided- for slice")
+
+		if !util.CheckSupportedSnssaiInPlmn(
 			*param.SliceInfoRequestForPduSession.SNssai,
 			*param.Tai.PlmnId) {
-		logger.Nsselection.Infof("[nsselectionForPduSession] S-NSSAI not supported in PLMN")
-		*problemDetails = models.ProblemDetails{
-			Title:  util.UNSUPPORTED_RESOURCE,
-			Status: http.StatusForbidden,
-			Detail: "S-NSSAI in Requested NSSAI is not supported in PLMN",
-			Cause:  "SNSSAI_NOT_SUPPORTED",
+			logger.Nsselection.Infof("[nsselectionForPduSession] S-NSSAI not supported in PLMN")
+			*problemDetails = models.ProblemDetails{
+				Title:  util.UNSUPPORTED_RESOURCE,
+				Status: http.StatusForbidden,
+				Detail: "S-NSSAI in Requested NSSAI is not supported in PLMN",
+				Cause:  "SNSSAI_NOT_SUPPORTED",
+			}
+			status = http.StatusForbidden
+			logger.Nsselection.Infof("[nsselectionForPduSession] ----3  Returning status: %d", status)
+			return status
 		}
-		status = http.StatusForbidden
-		logger.Nsselection.Infof("[nsselectionForPduSession] ----3  Returning status: %d", status)
-		return status
 	}
 
 	if param.HomePlmnId != nil {
