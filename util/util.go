@@ -151,7 +151,6 @@ func CheckSupportedSnssaiInPlmn(snssai models.Snssai, plmnId models.PlmnId) bool
 				return false
 			}
 		}
-
 	}
 	logger.Util.Warnf("No supported S-NSSAI list found for PLMNID %+v in NSSF configuration", plmnId)
 	return false
