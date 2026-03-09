@@ -16,6 +16,7 @@ import (
 	"math/rand"
 	"net/http"
 
+	"github.com/omec-project/nssf/logger"
 	"github.com/omec-project/nssf/plugin"
 	"github.com/omec-project/nssf/util"
 	"github.com/omec-project/openapi/models"
@@ -46,7 +47,7 @@ func nsselectionForPduSession(param plugin.NsselectionQueryParameter,
 				Title:  util.UNSUPPORTED_RESOURCE,
 				Status: http.StatusForbidden,
 				Detail: "Home PLMN is not supported",
-				Cause:  "SNSSAI_NOT_SUPPORTED",
+				Cause:  "NOT_AUTHORIZED",
 			}
 			status = http.StatusForbidden
 			return status
@@ -63,20 +64,21 @@ func nsselectionForPduSession(param plugin.NsselectionQueryParameter,
 		}
 	}
 
-	if param.Tai != nil &&
-		!util.CheckSupportedSnssaiInPlmn(*param.SliceInfoRequestForPduSession.SNssai, *param.Tai.PlmnId) {
-		// Return ProblemDetails indicating S-NSSAI is not supported
-		// TODO: Based on TS 23.501 V15.2.0, if the Requested NSSAI includes an S-NSSAI that is not valid in the
-		//       Serving PLMN, the NSSF may derive the Configured NSSAI for Serving PLMN
-		*problemDetails = models.ProblemDetails{
-			Title:  util.UNSUPPORTED_RESOURCE,
-			Status: http.StatusForbidden,
-			Detail: "S-NSSAI in Requested NSSAI is not supported in PLMN",
-			Cause:  "SNSSAI_NOT_SUPPORTED",
+	if param.Tai != nil {
+		logger.Nsselection.Infof("[nsselectionForPduSession] TAI provided- for slice")
+		if !util.CheckSupportedSnssaiInPlmn(
+			*param.SliceInfoRequestForPduSession.SNssai,
+			*param.Tai.PlmnId) {
+			logger.Nsselection.Infof("[nsselectionForPduSession] S-NSSAI not supported in PLMN")
+			*problemDetails = models.ProblemDetails{
+				Title:  util.UNSUPPORTED_RESOURCE,
+				Status: http.StatusForbidden,
+				Detail: "S-NSSAI in Requested NSSAI is not supported in PLMN",
+				Cause:  "SNSSAI_NOT_SUPPORTED",
+			}
+			status = http.StatusForbidden
+			return status
 		}
-
-		status = http.StatusForbidden
-		return status
 	}
 
 	if param.HomePlmnId != nil {

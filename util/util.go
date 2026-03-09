@@ -135,23 +135,24 @@ func compareTai(configTai, reqTai models.Tai) bool {
 
 // Check whether the given S-NSSAI is supported or not in PLMN
 func CheckSupportedSnssaiInPlmn(snssai models.Snssai, plmnId models.PlmnId) bool {
+	logger.Util.Infof("CheckSupportedSnssaiInPlmn: Start - SNSSAI: %+v, PLMN: %+v", snssai, plmnId)
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
 	if CheckStandardSnssai(snssai) {
-		return true
-	}
-
-	for _, supportedNssaiInPlmn := range factory.NssfConfig.Configuration.SupportedNssaiInPlmnList {
-		if *supportedNssaiInPlmn.PlmnId == plmnId {
-			for _, supportedSnssai := range supportedNssaiInPlmn.SupportedSnssaiList {
-				if snssai == supportedSnssai {
-					return true
+		logger.Util.Infof("CheckSupportedSnssaiInPlmn: SNSSAI %+v is standard SNSSAI", snssai)
+		// return true
+		for _, supportedNssaiInPlmn := range factory.NssfConfig.Configuration.SupportedNssaiInPlmnList {
+			if *supportedNssaiInPlmn.PlmnId == plmnId {
+				for _, supportedSnssai := range supportedNssaiInPlmn.SupportedSnssaiList {
+					if snssai == supportedSnssai {
+						return true
+					}
 				}
+				return false
 			}
-			return false
 		}
 	}
-	logger.Util.Warnf("no supported S-NSSAI list of PLMNID %+v in NSSF configuration", plmnId)
+	logger.Util.Warnf("No supported S-NSSAI list found for PLMNID %+v in NSSF configuration", plmnId)
 	return false
 }
 
