@@ -144,7 +144,7 @@ func CheckSupportedSnssaiInPlmn(snssai models.Snssai, plmnId models.PlmnId) bool
 		for _, supportedNssaiInPlmn := range factory.NssfConfig.Configuration.SupportedNssaiInPlmnList {
 			if *supportedNssaiInPlmn.PlmnId == plmnId {
 				for _, supportedSnssai := range supportedNssaiInPlmn.SupportedSnssaiList {
-					if snssai == supportedSnssai {
+					if snssai.Sst == supportedSnssai.Sst {
 						return true
 					}
 				}
