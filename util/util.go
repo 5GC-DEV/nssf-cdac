@@ -321,6 +321,12 @@ func GetMappingOfPlmnFromConfig(homePlmnId models.PlmnId) []models.MappingOfSnss
 		logger.CfgLog.Errorf("NSSF Config or Configuration is nil")
 		return nil
 	}
+	logger.CfgLog.Infof("MappingListFromPlmn length: %d",
+		len(factory.NssfConfig.Configuration.MappingListFromPlmn))
+
+	if factory.NssfConfig.Configuration.MappingListFromPlmn == nil {
+		logger.CfgLog.Warn("MappingListFromPlmn is nil")
+	}
 
 	for idx, mappingFromPlmn := range factory.NssfConfig.Configuration.MappingListFromPlmn {
 		if mappingFromPlmn.HomePlmnId == nil {
