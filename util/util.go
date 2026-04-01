@@ -299,7 +299,7 @@ func CheckSnssaiInNssai(targetSnssai models.Snssai, nssai []models.Snssai) bool 
 }
 
 // Get S-NSSAI mappings of the given Home PLMN ID from configuration
-func GetMappingOfPlmnFromConfig(homePlmnId models.PlmnId) []models.MappingOfSnssai {
+/*func GetMappingOfPlmnFromConfig(homePlmnId models.PlmnId) []models.MappingOfSnssai {
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
 	for _, mappingFromPlmn := range factory.NssfConfig.Configuration.MappingListFromPlmn {
@@ -307,6 +307,49 @@ func GetMappingOfPlmnFromConfig(homePlmnId models.PlmnId) []models.MappingOfSnss
 			return mappingFromPlmn.MappingOfSnssai
 		}
 	}
+	return nil
+}*/
+
+func GetMappingOfPlmnFromConfig(homePlmnId models.PlmnId) []models.MappingOfSnssai {
+	factory.ConfigLock.RLock()
+	defer factory.ConfigLock.RUnlock()
+
+	logger.CfgLog.Infof("GetMappingOfPlmnFromConfig called with HomePlmnId: MCC=%s, MNC=%s",
+		homePlmnId.Mcc, homePlmnId.Mnc)
+
+	if factory.NssfConfig.Configuration == nil {
+		logger.CfgLog.Errorf("NSSF Config or Configuration is nil")
+		return nil
+	}
+
+	for idx, mappingFromPlmn := range factory.NssfConfig.Configuration.MappingListFromPlmn {
+		if mappingFromPlmn.HomePlmnId == nil {
+			logger.CfgLog.Warnf("MappingListFromPlmn[%d] has nil HomePlmnId", idx)
+			continue
+		}
+
+		logger.CfgLog.Infof("Checking MappingListFromPlmn[%d]: MCC=%s, MNC=%s",
+			idx,
+			mappingFromPlmn.HomePlmnId.Mcc,
+			mappingFromPlmn.HomePlmnId.Mnc,
+		)
+
+		if *mappingFromPlmn.HomePlmnId == homePlmnId {
+			logger.CfgLog.Infof("Match found for HomePlmnId at index %d", idx)
+
+			if mappingFromPlmn.MappingOfSnssai == nil {
+				logger.CfgLog.Warnf("MappingOfSnssai is nil for matched PLMN at index %d", idx)
+			} else {
+				logger.CfgLog.Infof("MappingOfSnssai count: %d", len(mappingFromPlmn.MappingOfSnssai))
+			}
+
+			return mappingFromPlmn.MappingOfSnssai
+		}
+	}
+
+	logger.CfgLog.Infof("No mapping found for HomePlmnId: MCC=%s, MNC=%s",
+		homePlmnId.Mcc, homePlmnId.Mnc)
+
 	return nil
 }
 
