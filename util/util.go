@@ -375,7 +375,8 @@ func GetNsiInformationListFromConfig(snssai models.Snssai) []models.NsiInformati
 func GetAccessTypeFromConfig(tai models.Tai) models.AccessType {
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
-	for _, taConfig := range factory.NssfConfig.Configuration.TaList {
+	for i, taConfig := range factory.NssfConfig.Configuration.TaList {
+		logger.Util.Infof("Checking TA[%d]: %+v", i, taConfig.Tai)
 		if reflect.DeepEqual(*taConfig.Tai, tai) {
 			return *taConfig.AccessType
 		}
