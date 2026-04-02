@@ -118,7 +118,7 @@ func init() {
 	ConfigPodTrigger = make(chan bool)
 }
 
-func (c *Config) UpdateConfig(commChannel chan *protos.NetworkSliceResponse) bool {
+/*func (c *Config) UpdateConfig(commChannel chan *protos.NetworkSliceResponse) bool {
 	var minConfig bool
 	for rsp := range commChannel {
 		logger.GrpcLog.Infoln("Received updateConfig in the nssf app : ", rsp)
@@ -195,6 +195,162 @@ func (c *Config) UpdateConfig(commChannel chan *protos.NetworkSliceResponse) boo
 			}
 		}
 	}
+	return true
+} */
+
+func (c *Config) UpdateConfig(commChannel chan *protos.NetworkSliceResponse) bool {
+	var minConfig bool
+
+	for rsp := range commChannel {
+		logger.GrpcLog.Infoln("Received updateConfig in the nssf app : ", rsp)
+
+		// for thread safety
+		ConfigLock.Lock()
+
+		for _, ns := range rsp.NetworkSlice {
+			logger.GrpcLog.Infoln("Network Slice Name ", ns.Name)
+
+			if ns.Site == nil {
+				continue
+			}
+
+			site := ns.Site
+			logger.GrpcLog.Infoln("Site name ", site.SiteName)
+
+			if site.Plmn == nil {
+				logger.GrpcLog.Infoln("Plmn not present in the message ")
+				continue
+			}
+
+			plmn := models.PlmnId{
+				Mcc: site.Plmn.Mcc,
+				Mnc: site.Plmn.Mnc,
+			}
+
+			logger.GrpcLog.Infof("PLMN: MCC=%s MNC=%s", plmn.Mcc, plmn.Mnc)
+
+			// Parse NSSAI
+			val, err := strconv.ParseInt(ns.Nssai.Sst, 10, 64)
+			if err != nil {
+				logger.GrpcLog.Errorf("Error parsing SST: %v", err)
+				continue
+			}
+
+			nssai := models.Snssai{
+				Sst: int32(val),
+				Sd:  ns.Nssai.Sd,
+			}
+
+			logger.GrpcLog.Infof("Slice Sst=%d Sd=%s", nssai.Sst, nssai.Sd)
+
+			// =========================
+			// ✅ STEP 1: Update SupportedPlmn + NSSAI
+			// =========================
+			plmnIndex := -1
+
+			for i, existingPlmn := range NssfConfig.Configuration.SupportedPlmnList {
+				if existingPlmn.Mcc == plmn.Mcc && existingPlmn.Mnc == plmn.Mnc {
+					plmnIndex = i
+					break
+				}
+			}
+
+			if plmnIndex >= 0 {
+				// PLMN exists → update NSSAI list
+				exists := false
+
+				for _, existingSnssai := range NssfConfig.Configuration.SupportedNssaiInPlmnList[plmnIndex].SupportedSnssaiList {
+					if existingSnssai.Sst == nssai.Sst && existingSnssai.Sd == nssai.Sd {
+						exists = true
+						break
+					}
+				}
+
+				if !exists {
+					NssfConfig.Configuration.SupportedNssaiInPlmnList[plmnIndex].SupportedSnssaiList =
+						append(NssfConfig.Configuration.SupportedNssaiInPlmnList[plmnIndex].SupportedSnssaiList, nssai)
+				}
+
+			} else {
+				// New PLMN
+				NssfConfig.Configuration.SupportedPlmnList =
+					append(NssfConfig.Configuration.SupportedPlmnList, plmn)
+
+				newEntry := SupportedNssaiInPlmn{
+					PlmnId:              &plmn,
+					SupportedSnssaiList: []models.Snssai{nssai},
+				}
+
+				NssfConfig.Configuration.SupportedNssaiInPlmnList =
+					append(NssfConfig.Configuration.SupportedNssaiInPlmnList, newEntry)
+			}
+
+			// =========================
+			// ✅ STEP 2: Update MappingListFromPlmn
+			// =========================
+			mappingIndex := -1
+
+			for i, mapping := range NssfConfig.Configuration.MappingListFromPlmn {
+				if mapping.HomePlmnId != nil &&
+					mapping.HomePlmnId.Mcc == plmn.Mcc &&
+					mapping.HomePlmnId.Mnc == plmn.Mnc {
+					mappingIndex = i
+					break
+				}
+			}
+
+			newMapping := models.MappingOfSnssai{
+				HomeSnssai:    &nssai,
+				ServingSnssai: &nssai, // ✅ 1:1 mapping (can customize later)
+			}
+
+			if mappingIndex >= 0 {
+				// Update existing mapping
+				exists := false
+
+				for _, m := range NssfConfig.Configuration.MappingListFromPlmn[mappingIndex].MappingOfSnssai {
+					if m.HomeSnssai.Sst == nssai.Sst && m.HomeSnssai.Sd == nssai.Sd {
+						exists = true
+						break
+					}
+				}
+
+				if !exists {
+					NssfConfig.Configuration.MappingListFromPlmn[mappingIndex].MappingOfSnssai =
+						append(NssfConfig.Configuration.MappingListFromPlmn[mappingIndex].MappingOfSnssai, newMapping)
+				}
+
+			} else {
+				// Create new mapping entry
+				newEntry := MappingFromPlmnConfig{
+					HomePlmnId:      &plmn,
+					MappingOfSnssai: []models.MappingOfSnssai{newMapping},
+				}
+
+				NssfConfig.Configuration.MappingListFromPlmn =
+					append(NssfConfig.Configuration.MappingListFromPlmn, newEntry)
+			}
+		}
+
+		// =========================
+		// Unlock after update
+		// =========================
+		ConfigLock.Unlock()
+
+		// =========================
+		// ✅ STEP 3: Clean Trigger Logic
+		// =========================
+		hasConfig :=
+			len(NssfConfig.Configuration.SupportedPlmnList) > 0 &&
+				len(NssfConfig.Configuration.SupportedNssaiInPlmnList) > 0
+
+		if hasConfig != minConfig {
+			minConfig = hasConfig
+			ConfigPodTrigger <- hasConfig
+			logger.GrpcLog.Infof("Config trigger sent: %v", hasConfig)
+		}
+	}
+
 	return true
 }
 
