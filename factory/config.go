@@ -330,6 +330,61 @@ func (c *Config) UpdateConfig(commChannel chan *protos.NetworkSliceResponse) boo
 				NssfConfig.Configuration.MappingListFromPlmn =
 					append(NssfConfig.Configuration.MappingListFromPlmn, newEntry)
 			}
+			// =========================
+			// ✅ STEP 3: Update TA List
+			// =========================
+			for _, gnb := range site.Gnb {
+
+				if gnb == nil {
+					continue
+				}
+
+				if gnb.Tac == 0 {
+					logger.GrpcLog.Warnln("TAC is 0 or not set in GNB")
+					continue
+				}
+
+				// Convert TAC int32 → string
+				tacStr := strconv.Itoa(int(gnb.Tac))
+
+				tai := &models.Tai{
+					PlmnId: &models.PlmnId{
+						Mcc: site.Plmn.Mcc,
+						Mnc: site.Plmn.Mnc,
+					},
+					Tac: tacStr,
+				}
+
+				// Set Access Type (most cases 3GPP)
+				accessType := models.AccessType__3_GPP_ACCESS
+
+				taConfig := TaConfig{
+					Tai:                 tai,
+					AccessType:          &accessType,
+					SupportedSnssaiList: []models.Snssai{nssai},
+					// Optional: keep empty unless needed
+					RestrictedSnssaiList: nil,
+				}
+
+				exists := false
+
+				for _, existingTai := range NssfConfig.Configuration.TaList {
+					if existingTai.Tai.PlmnId.Mcc == tai.PlmnId.Mcc &&
+						existingTai.Tai.PlmnId.Mnc == tai.PlmnId.Mnc &&
+						existingTai.Tai.Tac == tai.Tac {
+						exists = true
+						break
+					}
+				}
+
+				if !exists {
+					NssfConfig.Configuration.TaList =
+						append(NssfConfig.Configuration.TaList, taConfig)
+
+					logger.GrpcLog.Infof("Added TA from GNB: MCC=%s MNC=%s TAC=%s",
+						tai.PlmnId.Mcc, tai.PlmnId.Mnc, tai.Tac)
+				}
+			}
 		}
 
 		// =========================
