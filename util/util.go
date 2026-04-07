@@ -235,14 +235,56 @@ func CheckSupportedSnssaiInTa(snssai models.Snssai, tai models.Tai) bool {
 
 // Check whether S-NSSAI is in SupportedNssaiAvailabilityData under the given TAI
 func CheckSupportedNssaiAvailabilityData(
-	snssai models.Snssai, tai models.Tai, s []models.SupportedNssaiAvailabilityData,
+	snssai models.Snssai,
+	tai models.Tai,
+	s []models.SupportedNssaiAvailabilityData,
 ) bool {
-	for _, supportedNssaiAvailabilityData := range s {
-		if reflect.DeepEqual(*supportedNssaiAvailabilityData.Tai, tai) &&
-			CheckSnssaiInNssai(snssai, supportedNssaiAvailabilityData.SupportedSnssaiList) {
+
+	logger.Util.Infof("---- CheckSupportedNssaiAvailabilityData START ----")
+
+	for i, data := range s {
+
+		if data.Tai == nil {
+			logger.Util.Warnf("Entry[%d]: TAI is nil", i)
+			continue
+		}
+
+		logger.Util.Infof("Entry[%d]: Checking TAI...", i)
+
+		// Replace DeepEqual with manual comparison
+		taiMatch := false
+
+		if data.Tai.PlmnId != nil && tai.PlmnId != nil {
+			if data.Tai.PlmnId.Mcc == tai.PlmnId.Mcc &&
+				data.Tai.PlmnId.Mnc == tai.PlmnId.Mnc &&
+				data.Tai.Tac == tai.Tac {
+
+				taiMatch = true
+			}
+		}
+
+		logger.Util.Infof("Entry[%d]: TAI Match = %v", i, taiMatch)
+
+		if !taiMatch {
+			logger.Util.Warnf("Entry[%d]: TAI mismatch", i)
+			continue
+		}
+
+		// Check NSSAI
+		nssaiMatch := CheckSnssaiInNssai(snssai, data.SupportedSnssaiList)
+
+		logger.Util.Infof("Entry[%d]: NSSAI Match = %v", i, nssaiMatch)
+
+		if nssaiMatch {
+			logger.Util.Infof("Entry[%d]: MATCH FOUND", i)
+			logger.Util.Infof("---- CheckSupportedNssaiAvailabilityData END ----")
 			return true
 		}
 	}
+
+	logger.Util.Warnf("No matching TAI + NSSAI found")
+	logger.Util.Infof("---- CheckSupportedNssaiAvailabilityData END ----")
+
 	return false
 }
 
