@@ -348,7 +348,7 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 			logger.Nsselection.Infof("TAI: %+v", *param.Tai)
 		}
 
-		// PLMN Check
+		// 🔴 PLMN Check
 		if param.Tai != nil &&
 			!util.CheckSupportedNssaiInPlmn(param.SliceInfoRequestForRegistration.RequestedNssai, *param.Tai.PlmnId) {
 
@@ -373,7 +373,7 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 			logger.Nsselection.Infof("Requested: SST=%d SD=%s",
 				requestedSnssai.Sst, requestedSnssai.Sd)
 
-			// TA Check
+			// 🔴 TA Check
 			if param.Tai != nil && !util.CheckSupportedSnssaiInTa(requestedSnssai, *param.Tai) {
 				logger.Nsselection.Warnf("Requested NSSAI NOT supported in TA")
 
@@ -387,7 +387,7 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 
 			var mappingOfRequestedSnssai models.Snssai
 
-			// Mapping Decision
+			// 🔴 Mapping Decision
 			if param.HomePlmnId != nil && !util.CheckStandardSnssai(requestedSnssai) {
 
 				logger.Nsselection.Infof("Non-standard NSSAI → checking mapping")
@@ -418,7 +418,7 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 
 			hitSubscription := false
 
-			// Subscription Match Loop
+			// 🔴 Subscription Match Loop
 			for _, subscribedSnssai := range param.SliceInfoRequestForRegistration.SubscribedNssai {
 
 				logger.Nsselection.Infof("Comparing Requested vs Subscribed")
@@ -438,7 +438,7 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 				if mappingOfRequestedSnssai.Sst == subscribedSnssai.SubscribedSnssai.Sst &&
 					mappingOfRequestedSnssai.Sd == subscribedSnssai.SubscribedSnssai.Sd {
 
-					logger.Nsselection.Infof("MATCH FOUND")
+					logger.Nsselection.Infof("✅ MATCH FOUND")
 
 					hitSubscription = true
 
@@ -474,7 +474,7 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 					break
 
 				} else {
-					logger.Nsselection.Warnf("NO MATCH")
+					logger.Nsselection.Warnf("❌ NO MATCH")
 				}
 			}
 
