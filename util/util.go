@@ -248,20 +248,51 @@ func CheckSupportedNssaiAvailabilityData(
 
 // Check whether S-NSSAI is supported or not by the AMF at UE's current TA
 func CheckSupportedSnssaiInAmfTa(snssai models.Snssai, nfId string, tai models.Tai) bool {
-	// Uncomment following lines if supported S-NSSAI lists of AMF Sets are independent of those of AMFs
-	// for _, amfSetConfig := range factory.NssfConfig.Configuration.AmfSetList {
-	//     if amfSetConfig.AmfList != nil && len(amfSetConfig.AmfList) != 0 && Contain(nfId, amfSetConfig.AmfList) {
-	//         return checkSupportedNssaiAvailabilityData(snssai, tai, amfSetConfig.SupportedNssaiAvailabilityData)
-	//     }
-	// }
 
-	for _, amfConfig := range factory.NssfConfig.Configuration.AmfList {
+	logger.Util.Infof("==== CheckSupportedSnssaiInAmfTa START ====")
+	logger.Util.Infof("Input NF ID: %s", nfId)
+	logger.Util.Infof("Input SNSSAI: SST=%d SD=%s", snssai.Sst, snssai.Sd)
+
+	if tai.PlmnId != nil {
+		logger.Util.Infof("Input TAI: MCC=%s MNC=%s TAC=%d",
+			tai.PlmnId.Mcc, tai.PlmnId.Mnc, tai.Tac)
+	} else {
+		logger.Util.Warnf("TAI PLMN is nil")
+	}
+
+	logger.Util.Infof("Configured AMF count: %d", len(factory.NssfConfig.Configuration.AmfList))
+
+	for i, amfConfig := range factory.NssfConfig.Configuration.AmfList {
+
+		logger.Util.Infof("Checking AMF[%d]: NfId=%s", i, amfConfig.NfId)
+
 		if amfConfig.NfId == nfId {
-			return CheckSupportedNssaiAvailabilityData(snssai, tai, amfConfig.SupportedNssaiAvailabilityData)
+
+			logger.Util.Infof("Match found for NF ID: %s", nfId)
+
+			if amfConfig.SupportedNssaiAvailabilityData == nil {
+				logger.Util.Warnf("SupportedNssaiAvailabilityData is nil for AMF %s", nfId)
+			} else {
+				logger.Util.Infof("SupportedNssaiAvailabilityData entries: %d",
+					len(amfConfig.SupportedNssaiAvailabilityData))
+			}
+
+			result := CheckSupportedNssaiAvailabilityData(
+				snssai,
+				tai,
+				amfConfig.SupportedNssaiAvailabilityData,
+			)
+
+			logger.Util.Infof("Result from CheckSupportedNssaiAvailabilityData: %v", result)
+			logger.Util.Infof("==== CheckSupportedSnssaiInAmfTa END ====")
+
+			return result
 		}
 	}
 
-	logger.Util.Warnf("no AMF %s in NSSF configuration", nfId)
+	logger.Util.Warnf("No AMF found for NF ID: %s in NSSF configuration", nfId)
+	logger.Util.Warnf("==== CheckSupportedSnssaiInAmfTa END ====")
+
 	return false
 }
 
