@@ -394,37 +394,65 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 
 			hitSubscription := false
 			for _, subscribedSnssai := range param.SliceInfoRequestForRegistration.SubscribedNssai {
-				if mappingOfRequestedSnssai == *subscribedSnssai.SubscribedSnssai {
+
+				logger.Nsselection.Infof("Comparing Requested vs Subscribed")
+				logger.Nsselection.Infof("Requested NSSAI: SST=%d SD=%s",
+					mappingOfRequestedSnssai.Sst, mappingOfRequestedSnssai.Sd)
+
+				if subscribedSnssai.SubscribedSnssai != nil {
+					logger.Nsselection.Infof("Subscribed NSSAI: SST=%d SD=%s",
+						subscribedSnssai.SubscribedSnssai.Sst, subscribedSnssai.SubscribedSnssai.Sd)
+				} else {
+					logger.Nsselection.Warnf("SubscribedSnssai is nil")
+					continue
+				}
+
+				// Compare using explicit fields (better than ==)
+				if mappingOfRequestedSnssai.Sst == subscribedSnssai.SubscribedSnssai.Sst &&
+					mappingOfRequestedSnssai.Sd == subscribedSnssai.SubscribedSnssai.Sd {
+
+					logger.Nsselection.Infof("MATCH FOUND for SST=%d SD=%s",
+						mappingOfRequestedSnssai.Sst, mappingOfRequestedSnssai.Sd)
+
 					// Requested S-NSSAI matches one of Subscribed S-NSSAI
-					// Add it to Allowed NSSAI list
 					hitSubscription = true
 
 					var allowedSnssaiElement models.AllowedSnssai
 					allowedSnssaiElement.AllowedSnssai = new(models.Snssai)
 					*allowedSnssaiElement.AllowedSnssai = requestedSnssai
+
 					nsiInformationList := util.GetNsiInformationListFromConfig(requestedSnssai)
 					if nsiInformationList != nil {
-						// TODO: `NsiInformationList` should be slice in `AllowedSnssai` instead of pointer of slice
-						allowedSnssaiElement.NsiInformationList = append(allowedSnssaiElement.NsiInformationList,
-							nsiInformationList...)
+						logger.Nsselection.Infof("NSI info found: %v", nsiInformationList)
+						allowedSnssaiElement.NsiInformationList = append(
+							allowedSnssaiElement.NsiInformationList,
+							nsiInformationList...,
+						)
+					} else {
+						logger.Nsselection.Warnf("No NSI info found for NSSAI")
 					}
+
 					if param.HomePlmnId != nil && !util.CheckStandardSnssai(requestedSnssai) {
 						allowedSnssaiElement.MappedHomeSnssai = new(models.Snssai)
 						*allowedSnssaiElement.MappedHomeSnssai = *subscribedSnssai.SubscribedSnssai
 					}
 
-					// Default Access Type is set to 3GPP Access if no TAI is provided
-					// TODO: Depend on operator implementation, it may also return S-NSSAIs in all valid Access Type if
-					//       UE's Access Type could not be identified
 					accessType := models.AccessType__3_GPP_ACCESS
 					if param.Tai != nil {
 						accessType = util.GetAccessTypeFromConfig(*param.Tai)
 					}
 
+					logger.Nsselection.Infof("Adding Allowed NSSAI with AccessType=%s", accessType)
+
 					util.AddAllowedSnssai(allowedSnssaiElement, accessType, authorizedNetworkSliceInfo)
 
 					checkIfRequestAllowed = true
 					break
+
+				} else {
+					logger.Nsselection.Warnf("NO MATCH: Requested(SST=%d SD=%s) vs Subscribed(SST=%d SD=%s)",
+						mappingOfRequestedSnssai.Sst, mappingOfRequestedSnssai.Sd,
+						subscribedSnssai.SubscribedSnssai.Sst, subscribedSnssai.SubscribedSnssai.Sd)
 				}
 			}
 
