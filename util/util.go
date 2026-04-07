@@ -386,11 +386,45 @@ func CheckStandardSnssai(snssai models.Snssai) bool {
 
 // Check whether the NSSAI contains the specific S-NSSAI
 func CheckSnssaiInNssai(targetSnssai models.Snssai, nssai []models.Snssai) bool {
-	for _, snssai := range nssai {
-		if snssai == targetSnssai {
+
+	logger.Util.Infof("==== CheckSnssaiInNssai START ====")
+
+	// 🔹 Log requested (target) NSSAI
+	logger.Util.Infof("Requested NSSAI -> SST=%d SD=%s",
+		targetSnssai.Sst, targetSnssai.Sd)
+
+	for i, snssai := range nssai {
+
+		// 🔹 Log configured NSSAI from list
+		logger.Util.Infof("Configured NSSAI[%d] -> SST=%d SD=%s",
+			i, snssai.Sst, snssai.Sd)
+
+		// 🔹 Compare explicitly (better visibility than ==)
+		sstMatch := snssai.Sst == targetSnssai.Sst
+		sdMatch := snssai.Sd == targetSnssai.Sd
+
+		logger.Util.Infof("Comparison Result[%d] -> SST Match=%v, SD Match=%v",
+			i, sstMatch, sdMatch)
+
+		if sstMatch && sdMatch {
+			logger.Util.Infof("NSSAI MATCH FOUND at index %d", i)
+			logger.Util.Infof("==== CheckSnssaiInNssai END ====")
 			return true
 		}
+
+		// 🔹 Optional: highlight mismatch clearly
+		if !sstMatch || !sdMatch {
+			logger.Util.Warnf("NSSAI mismatch at index %d -> Requested(SST=%d SD=%s) vs Configured(SST=%d SD=%s)",
+				i,
+				targetSnssai.Sst, targetSnssai.Sd,
+				snssai.Sst, snssai.Sd,
+			)
+		}
 	}
+
+	logger.Util.Warnf("No matching NSSAI found in configured list")
+	logger.Util.Infof("==== CheckSnssaiInNssai END ====")
+
 	return false
 }
 
