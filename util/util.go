@@ -245,11 +245,35 @@ func CheckSupportedNssaiAvailabilityData(
 	for i, data := range s {
 
 		if data.Tai == nil {
-			logger.Util.Warnf("Entry[%d]: TAI is nil", i)
+			logger.Util.Warnf("Entry[%d]: Configured TAI is nil", i)
 			continue
 		}
 
-		logger.Util.Infof("Entry[%d]: Checking TAI...", i)
+		logger.Util.Infof("Entry[%d]: ---- TAI Comparison Start ----", i)
+
+		// 🔹 Log CONFIGURED TAI (from NSSF config)
+		if data.Tai.PlmnId != nil {
+			logger.Util.Infof("Entry[%d]: Configured TAI -> MCC=%s MNC=%s TAC=%s",
+				i,
+				data.Tai.PlmnId.Mcc,
+				data.Tai.PlmnId.Mnc,
+				data.Tai.Tac,
+			)
+		} else {
+			logger.Util.Warnf("Entry[%d]: Configured TAI PLMN is nil", i)
+		}
+
+		// 🔹 Log REQUESTED TAI (incoming from AMF)
+		if tai.PlmnId != nil {
+			logger.Util.Infof("Entry[%d]: Requested TAI -> MCC=%s MNC=%s TAC=%s",
+				i,
+				tai.PlmnId.Mcc,
+				tai.PlmnId.Mnc,
+				tai.Tac,
+			)
+		} else {
+			logger.Util.Warnf("Entry[%d]: Requested TAI PLMN is nil", i)
+		}
 
 		// Replace DeepEqual with manual comparison
 		taiMatch := false
@@ -263,25 +287,24 @@ func CheckSupportedNssaiAvailabilityData(
 			}
 		}
 
-		logger.Util.Infof("Entry[%d]: TAI Match = %v", i, taiMatch)
+		logger.Util.Infof("Entry[%d]: TAI Match Result = %v", i, taiMatch)
 
 		if !taiMatch {
-			logger.Util.Warnf("Entry[%d]: TAI mismatch", i)
+			logger.Util.Warnf("Entry[%d]: TAI mismatch → Skipping NSSAI check", i)
 			continue
 		}
 
-		// Check NSSAI
+		// 🔹 Check NSSAI
 		nssaiMatch := CheckSnssaiInNssai(snssai, data.SupportedSnssaiList)
 
 		logger.Util.Infof("Entry[%d]: NSSAI Match = %v", i, nssaiMatch)
 
 		if nssaiMatch {
-			logger.Util.Infof("Entry[%d]: MATCH FOUND", i)
+			logger.Util.Infof("Entry[%d]: ✅ MATCH FOUND (TAI + NSSAI)", i)
 			logger.Util.Infof("---- CheckSupportedNssaiAvailabilityData END ----")
 			return true
 		}
 	}
-
 	logger.Util.Warnf("No matching TAI + NSSAI found")
 	logger.Util.Infof("---- CheckSupportedNssaiAvailabilityData END ----")
 
