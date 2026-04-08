@@ -509,27 +509,21 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 	// 🔹 Check AMF support for Allowed NSSAI in given TAI
 	if param.Tai != nil {
 
-		logger.Nsselection.Infof("Checking Allowed NSSAI in AMF for given TAI...")
-		logger.Nsselection.Infof("Input NF ID: %s", param.NfId)
-		logger.Nsselection.Infof("Allowed NSSAI List before AMF check: %+v",
-			authorizedNetworkSliceInfo.AllowedNssaiList)
+		logger.Nsselection.Infof("Populating AMF information for response")
 
+		// ✅ ALWAYS populate AMF info
+		util.AddAmfInformation(*param.Tai, authorizedNetworkSliceInfo)
+
+		// Optional: keep validation only for logging/debug
 		if !util.CheckAllowedNssaiInAmfTa(
 			authorizedNetworkSliceInfo.AllowedNssaiList,
 			param.NfId,
 			*param.Tai,
 		) {
-
-			logger.Nsselection.Warnf("No matching AMF found for Allowed NSSAI in given TAI → Adding AMF info")
-
-			util.AddAmfInformation(*param.Tai, authorizedNetworkSliceInfo)
-
-			logger.Nsselection.Infof("AMF Information added to response")
+			logger.Nsselection.Warnf("Allowed NSSAI NOT supported by AMF in given TAI")
 		} else {
-			logger.Nsselection.Infof("Allowed NSSAI is supported by AMF in given TAI")
+			logger.Nsselection.Infof("Allowed NSSAI supported by AMF in given TAI")
 		}
-	} else {
-		logger.Nsselection.Warnf("TAI is nil → Skipping AMF validation")
 	}
 
 	// 🔹 Handle Default Configured NSSAI Indication
