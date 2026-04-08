@@ -269,7 +269,7 @@ func CheckSupportedSnssaiInTa(snssai models.Snssai, tai models.Tai) bool {
 				logger.Util.Infof("TaList[%d]: Checking Supported NSSAI[%d]: SST=%d SD=%s",
 					i, j, supportedSnssai.Sst, supportedSnssai.Sd)
 
-				if supportedSnssai == snssai {
+				if supportedSnssai == snssai || supportedSnssai.Sst == snssai.Sst {
 					logger.Util.Infof("TaList[%d]: NSSAI MATCH FOUND → RETURN TRUE", i)
 					return true
 				}
