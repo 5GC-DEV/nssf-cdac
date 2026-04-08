@@ -438,7 +438,7 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 				if mappingOfRequestedSnssai.Sst == subscribedSnssai.SubscribedSnssai.Sst &&
 					mappingOfRequestedSnssai.Sd == subscribedSnssai.SubscribedSnssai.Sd {
 
-					logger.Nsselection.Infof("✅ MATCH FOUND")
+					logger.Nsselection.Infof("MATCH FOUND")
 
 					hitSubscription = true
 
@@ -474,7 +474,7 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 					break
 
 				} else {
-					logger.Nsselection.Warnf("❌ NO MATCH")
+					logger.Nsselection.Warnf("NO MATCH")
 				}
 			}
 
@@ -506,29 +506,73 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 
 	logger.Nsselection.Infof("==== NS Selection End ====")
 
-	if param.Tai != nil &&
-		!util.CheckAllowedNssaiInAmfTa(authorizedNetworkSliceInfo.AllowedNssaiList, param.NfId, *param.Tai) {
-		util.AddAmfInformation(*param.Tai, authorizedNetworkSliceInfo)
-	}
+	// 🔹 Check AMF support for Allowed NSSAI in given TAI
+	if param.Tai != nil {
 
-	if param.SliceInfoRequestForRegistration.DefaultConfiguredSnssaiInd {
-		// Default Configured NSSAI Indication is received from AMF
-		// Determine the Configured NSSAI based on the Default Configured NSSAI
-		useDefaultConfiguredNssai(param, authorizedNetworkSliceInfo)
-	} else if checkInvalidRequestedNssai {
-		// No Requested NSSAI is provided or the Requested NSSAI includes an S-NSSAI that is not valid
-		// Determine the Configured NSSAI based on the subscription
-		// Configure available NSSAI for UE in its PLMN
-		// If TAI is not provided, then unable to check if S-NSSAIs is supported in the PLMN
-		if param.Tai != nil {
-			setConfiguredNssai(param, authorizedNetworkSliceInfo)
+		logger.Nsselection.Infof("Checking Allowed NSSAI in AMF for given TAI...")
+		logger.Nsselection.Infof("Input NF ID: %s", param.NfId)
+		logger.Nsselection.Infof("Allowed NSSAI List before AMF check: %+v",
+			authorizedNetworkSliceInfo.AllowedNssaiList)
+
+		if !util.CheckAllowedNssaiInAmfTa(
+			authorizedNetworkSliceInfo.AllowedNssaiList,
+			param.NfId,
+			*param.Tai,
+		) {
+
+			logger.Nsselection.Warnf("No matching AMF found for Allowed NSSAI in given TAI → Adding AMF info")
+
+			util.AddAmfInformation(*param.Tai, authorizedNetworkSliceInfo)
+
+			logger.Nsselection.Infof("AMF Information added to response")
+		} else {
+			logger.Nsselection.Infof("Allowed NSSAI is supported by AMF in given TAI")
 		}
+	} else {
+		logger.Nsselection.Warnf("TAI is nil → Skipping AMF validation")
 	}
 
-	// If the NSSF cannot determine any Allowed or Configured S-NSSAI, it must not return 200.
-	// Instead, it should return 403 Forbidden with SNSSAI_NOT_SUPPORTED.
-	if len(authorizedNetworkSliceInfo.AllowedNssaiList) == 0 && len(authorizedNetworkSliceInfo.ConfiguredNssai) == 0 {
-		logger.Nsselection.Warnf("No S-NSSAI allowed or configured for the UE. Returning 403 to avoid empty 200 OK.")
+	// 🔹 Handle Default Configured NSSAI Indication
+	if param.SliceInfoRequestForRegistration.DefaultConfiguredSnssaiInd {
+
+		logger.Nsselection.Infof("DefaultConfiguredSnssaiInd = TRUE → Using default configured NSSAI")
+
+		useDefaultConfiguredNssai(param, authorizedNetworkSliceInfo)
+
+		logger.Nsselection.Infof("Configured NSSAI after default selection: %+v",
+			authorizedNetworkSliceInfo.ConfiguredNssai)
+
+	} else if checkInvalidRequestedNssai {
+
+		logger.Nsselection.Warnf("Invalid or no Requested NSSAI → Deriving Configured NSSAI from subscription")
+
+		if param.Tai != nil {
+
+			logger.Nsselection.Infof("Setting Configured NSSAI based on TAI and subscription")
+
+			setConfiguredNssai(param, authorizedNetworkSliceInfo)
+
+			logger.Nsselection.Infof("Configured NSSAI after processing: %+v",
+				authorizedNetworkSliceInfo.ConfiguredNssai)
+
+		} else {
+			logger.Nsselection.Warnf("TAI is nil → Cannot derive Configured NSSAI")
+		}
+	} else {
+		logger.Nsselection.Infof("Requested NSSAI valid → No need to derive Configured NSSAI")
+	}
+
+	// 🔹 Final Validation before response
+	logger.Nsselection.Infof("Final Allowed NSSAI List: %+v",
+		authorizedNetworkSliceInfo.AllowedNssaiList)
+
+	logger.Nsselection.Infof("Final Configured NSSAI: %+v",
+		authorizedNetworkSliceInfo.ConfiguredNssai)
+
+	if len(authorizedNetworkSliceInfo.AllowedNssaiList) == 0 &&
+		len(authorizedNetworkSliceInfo.ConfiguredNssai) == 0 {
+
+		logger.Nsselection.Warnf("No S-NSSAI allowed or configured → Returning 403")
 
 		*problemDetails = models.ProblemDetails{
 			Title:  util.UNSUPPORTED_RESOURCE,
@@ -539,6 +583,8 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 
 		return http.StatusForbidden
 	}
+
+	logger.Nsselection.Infof("Valid NSSAI found → Returning 200 OK")
 
 	status = http.StatusOK
 	return status
