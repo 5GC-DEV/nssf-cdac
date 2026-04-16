@@ -235,14 +235,79 @@ func CheckSupportedSnssaiInTa(snssai models.Snssai, tai models.Tai) bool {
 
 // Check whether S-NSSAI is in SupportedNssaiAvailabilityData under the given TAI
 func CheckSupportedNssaiAvailabilityData(
-	snssai models.Snssai, tai models.Tai, s []models.SupportedNssaiAvailabilityData,
+	snssai models.Snssai,
+	tai models.Tai,
+	s []models.SupportedNssaiAvailabilityData,
 ) bool {
-	for _, supportedNssaiAvailabilityData := range s {
-		if reflect.DeepEqual(*supportedNssaiAvailabilityData.Tai, tai) &&
-			CheckSnssaiInNssai(snssai, supportedNssaiAvailabilityData.SupportedSnssaiList) {
+
+	logger.Util.Infof("CheckSupportedNssaiAvailabilityData START")
+
+	for i, data := range s {
+
+		if data.Tai == nil {
+			logger.Util.Warnf("Entry[%d]: Configured TAI is nil", i)
+			continue
+		}
+
+		logger.Util.Infof("Entry[%d]:TAI Comparison Start", i)
+
+		// 🔹 Log CONFIGURED TAI (from NSSF config)
+		if data.Tai.PlmnId != nil {
+			logger.Util.Infof("Entry[%d]: Configured TAI -> MCC=%s MNC=%s TAC=%s",
+				i,
+				data.Tai.PlmnId.Mcc,
+				data.Tai.PlmnId.Mnc,
+				data.Tai.Tac,
+			)
+		} else {
+			logger.Util.Warnf("Entry[%d]: Configured TAI PLMN is nil", i)
+		}
+
+		// 🔹 Log REQUESTED TAI (incoming from AMF)
+		if tai.PlmnId != nil {
+			logger.Util.Infof("Entry[%d]: Requested TAI -> MCC=%s MNC=%s TAC=%s",
+				i,
+				tai.PlmnId.Mcc,
+				tai.PlmnId.Mnc,
+				tai.Tac,
+			)
+		} else {
+			logger.Util.Warnf("Entry[%d]: Requested TAI PLMN is nil", i)
+		}
+
+		// Replace DeepEqual with manual comparison
+		taiMatch := false
+
+		if data.Tai.PlmnId != nil && tai.PlmnId != nil {
+			if data.Tai.PlmnId.Mcc == tai.PlmnId.Mcc &&
+				data.Tai.PlmnId.Mnc == tai.PlmnId.Mnc &&
+				data.Tai.Tac == tai.Tac {
+
+				taiMatch = true
+			}
+		}
+
+		logger.Util.Infof("Entry[%d]: TAI Match Result = %v", i, taiMatch)
+
+		if !taiMatch {
+			logger.Util.Warnf("Entry[%d]: TAI mismatch → Skipping NSSAI check", i)
+			continue
+		}
+
+		// 🔹 Check NSSAI
+		nssaiMatch := CheckSnssaiInNssai(snssai, data.SupportedSnssaiList)
+
+		logger.Util.Infof("Entry[%d]: NSSAI Match = %v", i, nssaiMatch)
+
+		if nssaiMatch {
+			logger.Util.Infof("Entry[%d]:MATCH FOUND (TAI + NSSAI)", i)
+			logger.Util.Infof("CheckSupportedNssaiAvailabilityData END")
 			return true
 		}
 	}
+	logger.Util.Warnf("No matching TAI + NSSAI found")
+	logger.Util.Infof("CheckSupportedNssaiAvailabilityData END")
+
 	return false
 }
 
