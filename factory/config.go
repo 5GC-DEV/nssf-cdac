@@ -120,81 +120,208 @@ func init() {
 
 func (c *Config) UpdateConfig(commChannel chan *protos.NetworkSliceResponse) bool {
 	var minConfig bool
+
 	for rsp := range commChannel {
 		logger.GrpcLog.Infoln("Received updateConfig in the nssf app : ", rsp)
+
+		// for thread safety
+		ConfigLock.Lock()
+
 		for _, ns := range rsp.NetworkSlice {
 			logger.GrpcLog.Infoln("Network Slice Name ", ns.Name)
-			if ns.Site != nil {
-				logger.GrpcLog.Infoln("Network Slice has site name present ")
-				site := ns.Site
-				logger.GrpcLog.Infoln("Site name ", site.SiteName)
-				if site.Plmn != nil {
-					logger.GrpcLog.Infoln("Plmn mcc ", site.Plmn.Mcc)
-					logger.GrpcLog.Infoln("Plmn mnc ", site.Plmn.Mnc)
-					plmn := new(models.PlmnId)
-					plmn.Mnc = site.Plmn.Mnc
-					plmn.Mcc = site.Plmn.Mcc
-					sNssaiInPlmns := SupportedNssaiInPlmn{}
-					sNssaiInPlmns.PlmnId = plmn
-					nssai := new(models.Snssai)
-					val, err := strconv.ParseInt(ns.Nssai.Sst, 10, 64)
-					if err != nil {
-						logger.GrpcLog.Infoln("Error in parsing sst ", err)
+
+			if ns.Site == nil {
+				continue
+			}
+
+			site := ns.Site
+			logger.GrpcLog.Infoln("Site name ", site.SiteName)
+
+			if site.Plmn == nil {
+				logger.GrpcLog.Infoln("Plmn not present in the message ")
+				continue
+			}
+
+			plmn := models.PlmnId{
+				Mcc: site.Plmn.Mcc,
+				Mnc: site.Plmn.Mnc,
+			}
+
+			logger.GrpcLog.Infof("PLMN: MCC=%s MNC=%s", plmn.Mcc, plmn.Mnc)
+
+			// Parse NSSAI
+			val, err := strconv.ParseInt(ns.Nssai.Sst, 10, 64)
+			if err != nil {
+				logger.GrpcLog.Errorf("Error parsing SST: %v", err)
+				continue
+			}
+
+			nssai := models.Snssai{
+				Sst: int32(val),
+				Sd:  ns.Nssai.Sd,
+			}
+
+			logger.GrpcLog.Infof("Slice Sst=%d Sd=%s", nssai.Sst, nssai.Sd)
+
+			// =========================
+			// STEP 1: Update SupportedPlmn + NSSAI
+			// =========================
+			plmnIndex := -1
+
+			for i, existingPlmn := range NssfConfig.Configuration.SupportedPlmnList {
+				if existingPlmn.Mcc == plmn.Mcc && existingPlmn.Mnc == plmn.Mnc {
+					plmnIndex = i
+					break
+				}
+			}
+
+			if plmnIndex >= 0 {
+				// PLMN exists → update NSSAI list
+				exists := false
+
+				for _, existingSnssai := range NssfConfig.Configuration.SupportedNssaiInPlmnList[plmnIndex].SupportedSnssaiList {
+					if existingSnssai.Sst == nssai.Sst && existingSnssai.Sd == nssai.Sd {
+						exists = true
+						break
 					}
-					nssai.Sst = int32(val)
-					nssai.Sd = ns.Nssai.Sd
-					logger.GrpcLog.Infoln("Slice Sst ", ns.Nssai.Sst)
-					logger.GrpcLog.Infoln("Slice Sd ", ns.Nssai.Sd)
-					sNssaiInPlmns.SupportedSnssaiList = append(sNssaiInPlmns.SupportedSnssaiList, *nssai)
-					found := false
-					for i, cplmn := range NssfConfig.Configuration.SupportedPlmnList {
-						if cplmn.Mnc == plmn.Mnc && cplmn.Mcc == plmn.Mcc {
-							// Check if the S-NSSAI exists already
-							exists := false
-							for _, existingSnssai := range NssfConfig.Configuration.SupportedNssaiInPlmnList[i].SupportedSnssaiList {
-								if existingSnssai.Sst == nssai.Sst && existingSnssai.Sd == nssai.Sd {
-									exists = true
-									break
-								}
-							}
-							// Only append if a new slice
-							if !exists {
-								NssfConfig.Configuration.SupportedNssaiInPlmnList[i].SupportedSnssaiList = append(NssfConfig.Configuration.SupportedNssaiInPlmnList[i].SupportedSnssaiList, *nssai)
-							}
-							found = true
-							break
-						}
+				}
+
+				if !exists {
+					NssfConfig.Configuration.SupportedNssaiInPlmnList[plmnIndex].SupportedSnssaiList = append(NssfConfig.Configuration.SupportedNssaiInPlmnList[plmnIndex].SupportedSnssaiList, nssai)
+				}
+
+			} else {
+				// New PLMN
+				NssfConfig.Configuration.SupportedPlmnList =
+					append(NssfConfig.Configuration.SupportedPlmnList, plmn)
+
+				newEntry := SupportedNssaiInPlmn{
+					PlmnId:              &plmn,
+					SupportedSnssaiList: []models.Snssai{nssai},
+				}
+
+				NssfConfig.Configuration.SupportedNssaiInPlmnList =
+					append(NssfConfig.Configuration.SupportedNssaiInPlmnList, newEntry)
+			}
+
+			// =========================
+			// STEP 2: Update MappingListFromPlmn
+			// =========================
+			mappingIndex := -1
+
+			for i, mapping := range NssfConfig.Configuration.MappingListFromPlmn {
+				if mapping.HomePlmnId != nil &&
+					mapping.HomePlmnId.Mcc == plmn.Mcc &&
+					mapping.HomePlmnId.Mnc == plmn.Mnc {
+					mappingIndex = i
+					break
+				}
+			}
+
+			newMapping := models.MappingOfSnssai{
+				HomeSnssai:    &nssai,
+				ServingSnssai: &nssai, // 1:1 mapping (can customize later)
+			}
+
+			if mappingIndex >= 0 {
+				// Update existing mapping
+				exists := false
+
+				for _, m := range NssfConfig.Configuration.MappingListFromPlmn[mappingIndex].MappingOfSnssai {
+					if m.HomeSnssai.Sst == nssai.Sst && m.HomeSnssai.Sd == nssai.Sd {
+						exists = true
+						break
 					}
-					if !found {
-						NssfConfig.Configuration.SupportedPlmnList = append(NssfConfig.Configuration.SupportedPlmnList, *plmn)
-						NssfConfig.Configuration.SupportedNssaiInPlmnList = append(NssfConfig.Configuration.SupportedNssaiInPlmnList, sNssaiInPlmns)
+				}
+
+				if !exists {
+					NssfConfig.Configuration.MappingListFromPlmn[mappingIndex].MappingOfSnssai =
+						append(NssfConfig.Configuration.MappingListFromPlmn[mappingIndex].MappingOfSnssai, newMapping)
+				}
+
+			} else {
+				// Create new mapping entry
+				newEntry := MappingFromPlmnConfig{
+					HomePlmnId:      &plmn,
+					MappingOfSnssai: []models.MappingOfSnssai{newMapping},
+				}
+
+				NssfConfig.Configuration.MappingListFromPlmn =
+					append(NssfConfig.Configuration.MappingListFromPlmn, newEntry)
+			}
+			// =========================
+			// STEP 3: Update TA List
+			// =========================
+			for _, gnb := range site.Gnb {
+
+				if gnb == nil {
+					continue
+				}
+
+				if gnb.Tac == 0 {
+					logger.GrpcLog.Warnln("TAC is 0 or not set in GNB")
+					continue
+				}
+
+				// Convert TAC int32 → string
+				tacStr := strconv.Itoa(int(gnb.Tac))
+
+				tai := &models.Tai{
+					PlmnId: &models.PlmnId{
+						Mcc: site.Plmn.Mcc,
+						Mnc: site.Plmn.Mnc,
+					},
+					Tac: tacStr,
+				}
+
+				// Set Access Type (most cases 3GPP)
+				accessType := models.AccessType__3_GPP_ACCESS
+
+				taConfig := TaConfig{
+					Tai:                 tai,
+					AccessType:          &accessType,
+					SupportedSnssaiList: []models.Snssai{nssai},
+					// Optional: keep empty unless needed
+					RestrictedSnssaiList: nil,
+				}
+
+				exists := false
+
+				for _, existingTai := range NssfConfig.Configuration.TaList {
+					if existingTai.Tai.PlmnId.Mcc == tai.PlmnId.Mcc &&
+						existingTai.Tai.PlmnId.Mnc == tai.PlmnId.Mnc &&
+						existingTai.Tai.Tac == tai.Tac {
+						exists = true
+						break
 					}
-				} else {
-					logger.GrpcLog.Infoln("Plmn not present in the message ")
+				}
+
+				if !exists {
+					NssfConfig.Configuration.TaList =
+						append(NssfConfig.Configuration.TaList, taConfig)
+
+					logger.GrpcLog.Infof("Added TA from GNB: MCC=%s MNC=%s TAC=%s",
+						tai.PlmnId.Mcc, tai.PlmnId.Mnc, tai.Tac)
 				}
 			}
 		}
-		if !minConfig {
-			// first slice Created
-			if (len(NssfConfig.Configuration.SupportedPlmnList) > 0) &&
-				(len(NssfConfig.Configuration.SupportedNssaiInPlmnList) > 0) {
-				minConfig = true
-				ConfigPodTrigger <- true
-				logger.GrpcLog.Infoln("Send config trigger to main routine")
-			}
-		} else {
-			// all slices deleted
-			if (len(NssfConfig.Configuration.SupportedPlmnList) > 0) &&
-				(len(NssfConfig.Configuration.SupportedNssaiInPlmnList) > 0) {
-				minConfig = false
-				ConfigPodTrigger <- false
-				logger.GrpcLog.Infoln("Send config trigger to main routine")
-			} else {
-				ConfigPodTrigger <- true
-				logger.GrpcLog.Infoln("Send config trigger to main routine")
-			}
+
+		// =========================
+		// Unlock after update
+		// =========================
+		ConfigLock.Unlock()
+
+		hasConfig :=
+			len(NssfConfig.Configuration.SupportedPlmnList) > 0 &&
+				len(NssfConfig.Configuration.SupportedNssaiInPlmnList) > 0
+
+		if hasConfig != minConfig {
+			minConfig = hasConfig
+			ConfigPodTrigger <- hasConfig
+			logger.GrpcLog.Infof("Config trigger sent: %v", hasConfig)
 		}
 	}
+
 	return true
 }
 
