@@ -249,6 +249,18 @@ func nsselectionForRegistration(param plugin.NsselectionQueryParameter,
 			// Find mappings for S-NSSAIs in `subscribedSnssai`
 			for _, subscribedSnssai := range param.SliceInfoRequestForRegistration.SubscribedNssai {
 				if util.CheckStandardSnssai(*subscribedSnssai.SubscribedSnssai) {
+					logger.Nsselection.Debugf("Standard NSSAI → allowing directly")
+
+					var allowedSnssaiElement models.AllowedSnssai
+					allowedSnssaiElement.AllowedSnssai = new(models.Snssai)
+					*allowedSnssaiElement.AllowedSnssai = *subscribedSnssai.SubscribedSnssai
+
+					accessType := models.AccessType__3_GPP_ACCESS
+					if param.Tai != nil {
+						accessType = util.GetAccessTypeFromConfig(*param.Tai)
+					}
+
+					util.AddAllowedSnssai(allowedSnssaiElement, accessType, authorizedNetworkSliceInfo)
 					continue
 				}
 

@@ -189,19 +189,15 @@ func (c *Config) UpdateConfig(commChannel chan *protos.NetworkSliceResponse) boo
 				if !exists {
 					NssfConfig.Configuration.SupportedNssaiInPlmnList[plmnIndex].SupportedSnssaiList = append(NssfConfig.Configuration.SupportedNssaiInPlmnList[plmnIndex].SupportedSnssaiList, nssai)
 				}
-
 			} else {
 				// New PLMN
-				NssfConfig.Configuration.SupportedPlmnList =
-					append(NssfConfig.Configuration.SupportedPlmnList, plmn)
-
+				NssfConfig.Configuration.SupportedPlmnList = append(NssfConfig.Configuration.SupportedPlmnList, plmn)
 				newEntry := SupportedNssaiInPlmn{
 					PlmnId:              &plmn,
 					SupportedSnssaiList: []models.Snssai{nssai},
 				}
 
-				NssfConfig.Configuration.SupportedNssaiInPlmnList =
-					append(NssfConfig.Configuration.SupportedNssaiInPlmnList, newEntry)
+				NssfConfig.Configuration.SupportedNssaiInPlmnList = append(NssfConfig.Configuration.SupportedNssaiInPlmnList, newEntry)
 			}
 
 			// =========================
@@ -238,7 +234,6 @@ func (c *Config) UpdateConfig(commChannel chan *protos.NetworkSliceResponse) boo
 					NssfConfig.Configuration.MappingListFromPlmn[mappingIndex].MappingOfSnssai =
 						append(NssfConfig.Configuration.MappingListFromPlmn[mappingIndex].MappingOfSnssai, newMapping)
 				}
-
 			} else {
 				// Create new mapping entry
 				newEntry := MappingFromPlmnConfig{
@@ -253,11 +248,9 @@ func (c *Config) UpdateConfig(commChannel chan *protos.NetworkSliceResponse) boo
 			// STEP 3: Update TA List
 			// =========================
 			for _, gnb := range site.Gnb {
-
 				if gnb == nil {
 					continue
 				}
-
 				if gnb.Tac == 0 {
 					logger.GrpcLog.Warnln("TAC is 0 or not set in GNB")
 					continue
