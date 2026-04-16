@@ -231,8 +231,7 @@ func (c *Config) UpdateConfig(commChannel chan *protos.NetworkSliceResponse) boo
 				}
 
 				if !exists {
-					NssfConfig.Configuration.MappingListFromPlmn[mappingIndex].MappingOfSnssai =
-						append(NssfConfig.Configuration.MappingListFromPlmn[mappingIndex].MappingOfSnssai, newMapping)
+					NssfConfig.Configuration.MappingListFromPlmn[mappingIndex].MappingOfSnssai = append(NssfConfig.Configuration.MappingListFromPlmn[mappingIndex].MappingOfSnssai, newMapping)
 				}
 			} else {
 				// Create new mapping entry
@@ -241,8 +240,7 @@ func (c *Config) UpdateConfig(commChannel chan *protos.NetworkSliceResponse) boo
 					MappingOfSnssai: []models.MappingOfSnssai{newMapping},
 				}
 
-				NssfConfig.Configuration.MappingListFromPlmn =
-					append(NssfConfig.Configuration.MappingListFromPlmn, newEntry)
+				NssfConfig.Configuration.MappingListFromPlmn = append(NssfConfig.Configuration.MappingListFromPlmn, newEntry)
 			}
 			// =========================
 			// STEP 3: Update TA List
@@ -290,8 +288,7 @@ func (c *Config) UpdateConfig(commChannel chan *protos.NetworkSliceResponse) boo
 				}
 
 				if !exists {
-					NssfConfig.Configuration.TaList =
-						append(NssfConfig.Configuration.TaList, taConfig)
+					NssfConfig.Configuration.TaList = append(NssfConfig.Configuration.TaList, taConfig)
 
 					logger.GrpcLog.Infof("Added TA from GNB: MCC=%s MNC=%s TAC=%s",
 						tai.PlmnId.Mcc, tai.PlmnId.Mnc, tai.Tac)
@@ -304,9 +301,7 @@ func (c *Config) UpdateConfig(commChannel chan *protos.NetworkSliceResponse) boo
 		// =========================
 		ConfigLock.Unlock()
 
-		hasConfig :=
-			len(NssfConfig.Configuration.SupportedPlmnList) > 0 &&
-				len(NssfConfig.Configuration.SupportedNssaiInPlmnList) > 0
+		hasConfig := len(NssfConfig.Configuration.SupportedPlmnList) > 0 && len(NssfConfig.Configuration.SupportedNssaiInPlmnList) > 0
 
 		if hasConfig != minConfig {
 			minConfig = hasConfig
