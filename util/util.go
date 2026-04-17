@@ -408,20 +408,15 @@ func CheckStandardSnssai(snssai models.Snssai) bool {
 
 // Check whether the NSSAI contains the specific S-NSSAI
 func CheckSnssaiInNssai(targetSnssai models.Snssai, nssai []models.Snssai) bool {
-
-	logger.Util.Debugf("Requested NSSAI -> SST=%d SD=%s",
-		targetSnssai.Sst, targetSnssai.Sd)
+	logger.Util.Debugf("Requested NSSAI -> SST=%d SD=%s", targetSnssai.Sst, targetSnssai.Sd)
 
 	for i, snssai := range nssai {
-
-		logger.Util.Debugf("Configured NSSAI[%d] -> SST=%d SD=%s",
-			i, snssai.Sst, snssai.Sd)
+		logger.Util.Debugf("Configured NSSAI[%d] -> SST=%d SD=%s", i, snssai.Sst, snssai.Sd)
 
 		sstMatch := snssai.Sst == targetSnssai.Sst
 		sdMatch := snssai.Sd == targetSnssai.Sd
 
-		logger.Util.Infof("Comparison Result[%d] -> SST Match=%v, SD Match=%v",
-			i, sstMatch, sdMatch)
+		logger.Util.Infof("Comparison Result[%d] -> SST Match=%v, SD Match=%v", i, sstMatch, sdMatch)
 
 		if sstMatch && sdMatch {
 			logger.Util.Infof("NSSAI MATCH FOUND at index %d", i)
