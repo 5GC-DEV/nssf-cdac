@@ -208,7 +208,6 @@ func CheckSupportedSnssaiInTa(snssai models.Snssai, tai models.Tai) bool {
 	logger.Util.Debugf("Checking Global TaList...")
 
 	for i, taConfig := range factory.NssfConfig.Configuration.TaList {
-
 		if taConfig.Tai == nil {
 			logger.Util.Warnf("TaList[%d]: TAI is nil", i)
 			continue
@@ -235,21 +234,17 @@ func CheckSupportedSnssaiInTa(snssai models.Snssai, tai models.Tai) bool {
 	// =========================
 	// 2. Check AMF List
 	// =========================
-	logger.Util.Infof("Checking AMF SupportedNssaiAvailabilityData...")
+	logger.Util.Debugf("Checking AMF SupportedNssaiAvailabilityData...")
 
 	for i, amfConfig := range factory.NssfConfig.Configuration.AmfList {
-
-		logger.Util.Infof("AMF[%d]: NfId=%s", i, amfConfig.NfId)
-
+		logger.Util.Debugf("AMF[%d]: NfId=%s", i, amfConfig.NfId)
 		for j, supportedData := range amfConfig.SupportedNssaiAvailabilityData {
-
 			if supportedData.Tai == nil {
 				logger.Util.Warnf("AMF[%d] Data[%d]: TAI is nil", i, j)
 				continue
 			}
-
 			if compareTai(*supportedData.Tai, tai) {
-				logger.Util.Infof("AMF[%d] Data[%d]: TAI MATCH FOUND", i, j)
+				logger.Util.Debugf("AMF[%d] Data[%d]: TAI MATCH FOUND", i, j)
 
 				for k, supportedSnssai := range supportedData.SupportedSnssaiList {
 					logger.Util.Debugf("AMF[%d] Data[%d]: Checking NSSAI[%d]: SST=%d SD=%s",
@@ -260,7 +255,6 @@ func CheckSupportedSnssaiInTa(snssai models.Snssai, tai models.Tai) bool {
 						return true
 					}
 				}
-
 				logger.Util.Warnf("AMF[%d] Data[%d]: TAI matched but NSSAI NOT FOUND", i, j)
 			}
 		}
@@ -293,12 +287,7 @@ func CheckSupportedSnssaiInTa(snssai models.Snssai, tai models.Tai) bool {
 }
 
 // Check whether S-NSSAI is in SupportedNssaiAvailabilityData under the given TAI
-func CheckSupportedNssaiAvailabilityData(
-	snssai models.Snssai,
-	tai models.Tai,
-	s []models.SupportedNssaiAvailabilityData,
-) bool {
-
+func CheckSupportedNssaiAvailabilityData(snssai models.Snssai, tai models.Tai, s []models.SupportedNssaiAvailabilityData) bool {
 	for i, data := range s {
 		if data.Tai == nil {
 			logger.Util.Warnf("Entry[%d]: Configured TAI is nil", i)
