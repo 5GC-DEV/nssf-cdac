@@ -189,46 +189,161 @@ func CheckSupportedNssaiInPlmn(nssai []models.Snssai, plmnId models.PlmnId) bool
 }
 
 // Check whether S-NSSAI is supported or not at UE's current TA
+/*func CheckSupportedSnssaiInTa(snssai models.Snssai, tai models.Tai) bool {
+	 factory.ConfigLock.RLock()
+	 defer factory.ConfigLock.RUnlock()
+
+	 // 1. Check Global TaList
+	 for _, taConfig := range factory.NssfConfig.Configuration.TaList {
+		 if taConfig.Tai != nil && compareTai(*taConfig.Tai, tai) {
+			 for _, supportedSnssai := range taConfig.SupportedSnssaiList {
+				 if supportedSnssai == snssai {
+					 return true
+				 }
+			 }
+			 return false
+			 // If TA matches but Slice is not found, we don't return false yet;
+			 // we check other sources just in case.
+		 }
+	 }
+	 // 2. Check AMF List (Fallback for Dynamic/GRPC Config)
+	 for _, amfConfig := range factory.NssfConfig.Configuration.AmfList {
+		 for _, supportedData := range amfConfig.SupportedNssaiAvailabilityData {
+			 if supportedData.Tai != nil && compareTai(*supportedData.Tai, tai) {
+				 for _, supportedSnssai := range supportedData.SupportedSnssaiList {
+					 if supportedSnssai == snssai {
+						 return true
+					 }
+				 }
+			 }
+		 }
+	 }
+
+	 // 3. Standard S-NSSAI Fallback
+	 // If it is a Standard S-NSSAI (SST 1-3, no SD) and the PLMN check passed,
+	 // we often assume it is supported unless explicitly restricted.
+	 // (Enable this if your test environment implies standard slices are always on)
+	 if CheckStandardSnssai(snssai) {
+		 // Verify if the PLMN supports it
+		 if CheckSupportedSnssaiInPlmn(snssai, *tai.PlmnId) {
+			 return true
+		 }
+	 }
+
+	 return false
+ }*/
+
+// Check whether S-NSSAI is supported or not at UE's current TA
 func CheckSupportedSnssaiInTa(snssai models.Snssai, tai models.Tai) bool {
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
 
+	logger.Util.Infof("==== CheckSupportedSnssaiInTa START ====")
+	logger.Util.Infof("Input NSSAI: SST=%d SD=%s", snssai.Sst, snssai.Sd)
+
+	if tai.PlmnId != nil {
+		logger.Util.Infof("Input TAI: MCC=%s MNC=%s TAC=%s",
+			tai.PlmnId.Mcc, tai.PlmnId.Mnc, tai.Tac)
+	} else {
+		logger.Util.Warnf("TAI PLMN is nil")
+	}
+
+	// =========================
 	// 1. Check Global TaList
-	for _, taConfig := range factory.NssfConfig.Configuration.TaList {
-		if taConfig.Tai != nil && compareTai(*taConfig.Tai, tai) {
-			for _, supportedSnssai := range taConfig.SupportedSnssaiList {
-				if supportedSnssai == snssai {
+	// =========================
+	logger.Util.Infof("Checking Global TaList...")
+
+	for i, taConfig := range factory.NssfConfig.Configuration.TaList {
+
+		if taConfig.Tai == nil {
+			logger.Util.Warnf("TaList[%d]: TAI is nil", i)
+			continue
+		}
+
+		logger.Util.Infof("TaList[%d]: Comparing TAI...", i)
+
+		if compareTai(*taConfig.Tai, tai) {
+			logger.Util.Infof("TaList[%d]: TAI MATCH FOUND", i)
+
+			for j, supportedSnssai := range taConfig.SupportedSnssaiList {
+				logger.Util.Infof("TaList[%d]: Checking Supported NSSAI[%d]: SST=%d SD=%s",
+					i, j, supportedSnssai.Sst, supportedSnssai.Sd)
+
+				if supportedSnssai == snssai || supportedSnssai.Sst == snssai.Sst {
+					logger.Util.Infof("TaList[%d]: NSSAI MATCH FOUND → RETURN TRUE", i)
 					return true
 				}
 			}
+
+			logger.Util.Warnf("TaList[%d]: TAI matched but NSSAI NOT FOUND → RETURN FALSE", i)
 			return false
-			// If TA matches but Slice is not found, we don't return false yet;
-			// we check other sources just in case.
 		}
 	}
-	// 2. Check AMF List (Fallback for Dynamic/GRPC Config)
-	for _, amfConfig := range factory.NssfConfig.Configuration.AmfList {
-		for _, supportedData := range amfConfig.SupportedNssaiAvailabilityData {
-			if supportedData.Tai != nil && compareTai(*supportedData.Tai, tai) {
-				for _, supportedSnssai := range supportedData.SupportedSnssaiList {
+
+	// =========================
+	// 2. Check AMF List
+	// =========================
+	logger.Util.Infof("Checking AMF SupportedNssaiAvailabilityData...")
+
+	for i, amfConfig := range factory.NssfConfig.Configuration.AmfList {
+
+		logger.Util.Infof("AMF[%d]: NfId=%s", i, amfConfig.NfId)
+
+		for j, supportedData := range amfConfig.SupportedNssaiAvailabilityData {
+
+			if supportedData.Tai == nil {
+				logger.Util.Warnf("AMF[%d] Data[%d]: TAI is nil", i, j)
+				continue
+			}
+
+			logger.Util.Infof("AMF[%d] Data[%d]: Comparing TAI...", i, j)
+
+			if compareTai(*supportedData.Tai, tai) {
+				logger.Util.Infof("AMF[%d] Data[%d]: TAI MATCH FOUND", i, j)
+
+				for k, supportedSnssai := range supportedData.SupportedSnssaiList {
+					logger.Util.Infof("AMF[%d] Data[%d]: Checking NSSAI[%d]: SST=%d SD=%s",
+						i, j, k, supportedSnssai.Sst, supportedSnssai.Sd)
+
 					if supportedSnssai == snssai {
+						logger.Util.Infof("AMF[%d] Data[%d]: NSSAI MATCH FOUND → RETURN TRUE", i, j)
 						return true
 					}
 				}
+
+				logger.Util.Warnf("AMF[%d] Data[%d]: TAI matched but NSSAI NOT FOUND", i, j)
 			}
 		}
 	}
 
-	// 3. Standard S-NSSAI Fallback
-	// If it is a Standard S-NSSAI (SST 1-3, no SD) and the PLMN check passed,
-	// we often assume it is supported unless explicitly restricted.
-	// (Enable this if your test environment implies standard slices are always on)
+	// =========================
+	// 3. Standard NSSAI Fallback
+	// =========================
+	logger.Util.Infof("Checking Standard NSSAI fallback...")
+
 	if CheckStandardSnssai(snssai) {
-		// Verify if the PLMN supports it
-		if CheckSupportedSnssaiInPlmn(snssai, *tai.PlmnId) {
-			return true
+		logger.Util.Infof("NSSAI is STANDARD (SST=%d, SD empty)", snssai.Sst)
+
+		if tai.PlmnId != nil {
+			plmnSupported := CheckSupportedSnssaiInPlmn(snssai, *tai.PlmnId)
+			logger.Util.Infof("PLMN support check result: %v", plmnSupported)
+
+			if plmnSupported {
+				logger.Util.Infof("Standard NSSAI allowed via PLMN → RETURN TRUE")
+				return true
+			}
+		} else {
+			logger.Util.Warnf("Cannot check PLMN support → PLMN is nil")
 		}
+	} else {
+		logger.Util.Infof("NSSAI is NON-STANDARD → skipping fallback")
 	}
+
+	// =========================
+	// FINAL
+	// =========================
+	logger.Util.Warnf("No condition matched → RETURN FALSE")
+	logger.Util.Infof("==== CheckSupportedSnssaiInTa END ====")
 
 	return false
 }
@@ -240,7 +355,7 @@ func CheckSupportedNssaiAvailabilityData(
 	s []models.SupportedNssaiAvailabilityData,
 ) bool {
 
-	logger.Util.Infof("CheckSupportedNssaiAvailabilityData START")
+	logger.Util.Infof("---- CheckSupportedNssaiAvailabilityData START ----")
 
 	for i, data := range s {
 
@@ -249,7 +364,7 @@ func CheckSupportedNssaiAvailabilityData(
 			continue
 		}
 
-		logger.Util.Infof("Entry[%d]:TAI Comparison Start", i)
+		logger.Util.Infof("Entry[%d]: ---- TAI Comparison Start ----", i)
 
 		// 🔹 Log CONFIGURED TAI (from NSSF config)
 		if data.Tai.PlmnId != nil {
@@ -300,33 +415,64 @@ func CheckSupportedNssaiAvailabilityData(
 		logger.Util.Infof("Entry[%d]: NSSAI Match = %v", i, nssaiMatch)
 
 		if nssaiMatch {
-			logger.Util.Infof("Entry[%d]:MATCH FOUND (TAI + NSSAI)", i)
+			logger.Util.Infof("Entry[%d]: MATCH FOUND (TAI + NSSAI)", i)
 			logger.Util.Infof("CheckSupportedNssaiAvailabilityData END")
 			return true
 		}
 	}
 	logger.Util.Warnf("No matching TAI + NSSAI found")
-	logger.Util.Infof("CheckSupportedNssaiAvailabilityData END")
+	logger.Util.Infof("---- CheckSupportedNssaiAvailabilityData END ----")
 
 	return false
 }
 
 // Check whether S-NSSAI is supported or not by the AMF at UE's current TA
 func CheckSupportedSnssaiInAmfTa(snssai models.Snssai, nfId string, tai models.Tai) bool {
-	// Uncomment following lines if supported S-NSSAI lists of AMF Sets are independent of those of AMFs
-	// for _, amfSetConfig := range factory.NssfConfig.Configuration.AmfSetList {
-	//     if amfSetConfig.AmfList != nil && len(amfSetConfig.AmfList) != 0 && Contain(nfId, amfSetConfig.AmfList) {
-	//         return checkSupportedNssaiAvailabilityData(snssai, tai, amfSetConfig.SupportedNssaiAvailabilityData)
-	//     }
-	// }
 
-	for _, amfConfig := range factory.NssfConfig.Configuration.AmfList {
+	logger.Util.Infof("==== CheckSupportedSnssaiInAmfTa START ====")
+	logger.Util.Infof("Input NF ID: %s", nfId)
+	logger.Util.Infof("Input SNSSAI: SST=%d SD=%s", snssai.Sst, snssai.Sd)
+
+	if tai.PlmnId != nil {
+		logger.Util.Infof("Input TAI: MCC=%s MNC=%s TAC=%d",
+			tai.PlmnId.Mcc, tai.PlmnId.Mnc, tai.Tac)
+	} else {
+		logger.Util.Warnf("TAI PLMN is nil")
+	}
+
+	logger.Util.Infof("Configured AMF count: %d", len(factory.NssfConfig.Configuration.AmfList))
+
+	for i, amfConfig := range factory.NssfConfig.Configuration.AmfList {
+
+		logger.Util.Infof("Checking AMF[%d]: NfId=%s", i, amfConfig.NfId)
+
 		if amfConfig.NfId == nfId {
-			return CheckSupportedNssaiAvailabilityData(snssai, tai, amfConfig.SupportedNssaiAvailabilityData)
+
+			logger.Util.Infof("Match found for NF ID: %s", nfId)
+
+			if amfConfig.SupportedNssaiAvailabilityData == nil {
+				logger.Util.Warnf("SupportedNssaiAvailabilityData is nil for AMF %s", nfId)
+			} else {
+				logger.Util.Infof("SupportedNssaiAvailabilityData entries: %d",
+					len(amfConfig.SupportedNssaiAvailabilityData))
+			}
+
+			result := CheckSupportedNssaiAvailabilityData(
+				snssai,
+				tai,
+				amfConfig.SupportedNssaiAvailabilityData,
+			)
+
+			logger.Util.Infof("Result from CheckSupportedNssaiAvailabilityData: %v", result)
+			logger.Util.Infof("==== CheckSupportedSnssaiInAmfTa END ====")
+
+			return result
 		}
 	}
 
-	logger.Util.Warnf("no AMF %s in NSSF configuration", nfId)
+	logger.Util.Warnf("No AMF found for NF ID: %s in NSSF configuration", nfId)
+	logger.Util.Warnf("==== CheckSupportedSnssaiInAmfTa END ====")
+
 	return false
 }
 
@@ -355,23 +501,94 @@ func CheckStandardSnssai(snssai models.Snssai) bool {
 
 // Check whether the NSSAI contains the specific S-NSSAI
 func CheckSnssaiInNssai(targetSnssai models.Snssai, nssai []models.Snssai) bool {
-	for _, snssai := range nssai {
-		if snssai == targetSnssai {
+
+	logger.Util.Infof("==== CheckSnssaiInNssai START ====")
+
+	// 🔹 Log requested (target) NSSAI
+	logger.Util.Infof("Requested NSSAI -> SST=%d SD=%s",
+		targetSnssai.Sst, targetSnssai.Sd)
+
+	for i, snssai := range nssai {
+
+		// 🔹 Log configured NSSAI from list
+		logger.Util.Infof("Configured NSSAI[%d] -> SST=%d SD=%s",
+			i, snssai.Sst, snssai.Sd)
+
+		// 🔹 Compare explicitly (better visibility than ==)
+		sstMatch := snssai.Sst == targetSnssai.Sst
+		sdMatch := snssai.Sd == targetSnssai.Sd
+
+		logger.Util.Infof("Comparison Result[%d] -> SST Match=%v, SD Match=%v",
+			i, sstMatch, sdMatch)
+
+		if sstMatch && sdMatch {
+			logger.Util.Infof("NSSAI MATCH FOUND at index %d", i)
+			logger.Util.Infof("==== CheckSnssaiInNssai END ====")
 			return true
 		}
+
+		// 🔹 Optional: highlight mismatch clearly
+		if !sstMatch || !sdMatch {
+			logger.Util.Warnf("NSSAI mismatch at index %d -> Requested(SST=%d SD=%s) vs Configured(SST=%d SD=%s)",
+				i,
+				targetSnssai.Sst, targetSnssai.Sd,
+				snssai.Sst, snssai.Sd,
+			)
+		}
 	}
+
+	logger.Util.Warnf("No matching NSSAI found in configured list")
+	logger.Util.Infof("==== CheckSnssaiInNssai END ====")
+
 	return false
 }
 
-// Get S-NSSAI mappings of the given Home PLMN ID from configuration
 func GetMappingOfPlmnFromConfig(homePlmnId models.PlmnId) []models.MappingOfSnssai {
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
-	for _, mappingFromPlmn := range factory.NssfConfig.Configuration.MappingListFromPlmn {
+
+	logger.CfgLog.Infof("GetMappingOfPlmnFromConfig called with HomePlmnId: MCC=%s, MNC=%s",
+		homePlmnId.Mcc, homePlmnId.Mnc)
+
+	if factory.NssfConfig.Configuration == nil {
+		logger.CfgLog.Errorf("NSSF Config or Configuration is nil")
+		return nil
+	}
+	logger.CfgLog.Infof("MappingListFromPlmn length: %d",
+		len(factory.NssfConfig.Configuration.MappingListFromPlmn))
+
+	if factory.NssfConfig.Configuration.MappingListFromPlmn == nil {
+		logger.CfgLog.Warn("MappingListFromPlmn is nil")
+	}
+
+	for idx, mappingFromPlmn := range factory.NssfConfig.Configuration.MappingListFromPlmn {
+		if mappingFromPlmn.HomePlmnId == nil {
+			logger.CfgLog.Warnf("MappingListFromPlmn[%d] has nil HomePlmnId", idx)
+			continue
+		}
+
+		logger.CfgLog.Infof("Checking MappingListFromPlmn[%d]: MCC=%s, MNC=%s",
+			idx,
+			mappingFromPlmn.HomePlmnId.Mcc,
+			mappingFromPlmn.HomePlmnId.Mnc,
+		)
+
 		if *mappingFromPlmn.HomePlmnId == homePlmnId {
+			logger.CfgLog.Infof("Match found for HomePlmnId at index %d", idx)
+
+			if mappingFromPlmn.MappingOfSnssai == nil {
+				logger.CfgLog.Warnf("MappingOfSnssai is nil for matched PLMN at index %d", idx)
+			} else {
+				logger.CfgLog.Infof("MappingOfSnssai count: %d", len(mappingFromPlmn.MappingOfSnssai))
+			}
+
 			return mappingFromPlmn.MappingOfSnssai
 		}
 	}
+
+	logger.CfgLog.Infof("No mapping found for HomePlmnId: MCC=%s, MNC=%s",
+		homePlmnId.Mcc, homePlmnId.Mnc)
+
 	return nil
 }
 
@@ -391,7 +608,9 @@ func GetNsiInformationListFromConfig(snssai models.Snssai) []models.NsiInformati
 func GetAccessTypeFromConfig(tai models.Tai) models.AccessType {
 	factory.ConfigLock.RLock()
 	defer factory.ConfigLock.RUnlock()
-	for _, taConfig := range factory.NssfConfig.Configuration.TaList {
+	logger.Util.Infof("Checking length[%d]", len(factory.NssfConfig.Configuration.TaList))
+	for i, taConfig := range factory.NssfConfig.Configuration.TaList {
+		logger.Util.Infof("Checking TA[%d]: %+v", i, taConfig.Tai)
 		if reflect.DeepEqual(*taConfig.Tai, tai) {
 			return *taConfig.AccessType
 		}
