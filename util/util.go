@@ -325,7 +325,6 @@ func CheckSupportedNssaiAvailabilityData(snssai models.Snssai, tai models.Tai, s
 			if data.Tai.PlmnId.Mcc == tai.PlmnId.Mcc &&
 				data.Tai.PlmnId.Mnc == tai.PlmnId.Mnc &&
 				data.Tai.Tac == tai.Tac {
-
 				taiMatch = true
 			}
 		}
@@ -353,45 +352,33 @@ func CheckSupportedNssaiAvailabilityData(snssai models.Snssai, tai models.Tai, s
 
 // Check whether S-NSSAI is supported or not by the AMF at UE's current TA
 func CheckSupportedSnssaiInAmfTa(snssai models.Snssai, nfId string, tai models.Tai) bool {
-
 	logger.Util.Debugf("Input NF ID: %s", nfId)
 	logger.Util.Debugf("Input SNSSAI: SST=%d SD=%s", snssai.Sst, snssai.Sd)
-
 	if tai.PlmnId != nil {
-		logger.Util.Debugf("Input TAI: MCC=%s MNC=%s TAC=%d",
-			tai.PlmnId.Mcc, tai.PlmnId.Mnc, tai.Tac)
+		logger.Util.Debugf("Input TAI: MCC=%s MNC=%s TAC=%d", tai.PlmnId.Mcc, tai.PlmnId.Mnc, tai.Tac)
 	} else {
 		logger.Util.Warnf("TAI PLMN is nil")
 	}
-
 	logger.Util.Debugf("Configured AMF count: %d", len(factory.NssfConfig.Configuration.AmfList))
-
 	for i, amfConfig := range factory.NssfConfig.Configuration.AmfList {
-
 		logger.Util.Debugf("Checking AMF[%d]: NfId=%s", i, amfConfig.NfId)
-
 		if amfConfig.NfId == nfId {
-
 			logger.Util.Debugf("Match found for NF ID: %s", nfId)
-
 			if amfConfig.SupportedNssaiAvailabilityData == nil {
 				logger.Util.Warnf("SupportedNssaiAvailabilityData is nil for AMF %s", nfId)
 			} else {
 				logger.Util.Debugf("SupportedNssaiAvailabilityData entries: %d",
 					len(amfConfig.SupportedNssaiAvailabilityData))
 			}
-
 			result := CheckSupportedNssaiAvailabilityData(
 				snssai,
 				tai,
 				amfConfig.SupportedNssaiAvailabilityData,
 			)
-
 			logger.Util.Debugf("Result from CheckSupportedNssaiAvailabilityData: %v", result)
 			return result
 		}
 	}
-
 	logger.Util.Warnf("No AMF found for NF ID: %s in NSSF configuration", nfId)
 	return false
 }
