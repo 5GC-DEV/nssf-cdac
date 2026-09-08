@@ -14,10 +14,10 @@ package producer
 import (
 	"net/http"
 
+	"github.com/5GC-DEV/openapi-cdac/models"
 	"github.com/omec-project/nssf/logger"
 	"github.com/omec-project/nssf/plugin"
 	"github.com/omec-project/nssf/util"
-	"github.com/omec-project/openapi/models"
 )
 
 // Set Allowed NSSAI with Subscribed S-NSSAI(s) which are marked as default S-NSSAI(s)

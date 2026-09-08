@@ -16,10 +16,10 @@ import (
 	"math/rand"
 	"net/http"
 
+	"github.com/5GC-DEV/openapi-cdac/models"
 	"github.com/omec-project/nssf/logger"
 	"github.com/omec-project/nssf/plugin"
 	"github.com/omec-project/nssf/util"
-	"github.com/omec-project/openapi/models"
 )
 
 func selectNsiInformation(nsiInformationList []models.NsiInformation) models.NsiInformation {

@@ -6,9 +6,9 @@ package consumer_test
 import (
 	"testing"
 
+	"github.com/5GC-DEV/openapi-cdac/models"
 	"github.com/omec-project/nssf/consumer"
 	"github.com/omec-project/nssf/context"
-	"github.com/omec-project/openapi/models"
 )
 
 func TestBuildNFProfile_EmptyContext(t *testing.T) {

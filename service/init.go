@@ -21,6 +21,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/5GC-DEV/openapi-cdac/models"
 	grpcClient "github.com/omec-project/config5g/proto/client"
 	protos "github.com/omec-project/config5g/proto/sdcoreConfig"
 	"github.com/omec-project/nssf/consumer"
@@ -30,7 +31,6 @@ import (
 	"github.com/omec-project/nssf/metrics"
 	"github.com/omec-project/nssf/nssaiavailability"
 	"github.com/omec-project/nssf/nsselection"
-	"github.com/omec-project/openapi/models"
 	"github.com/omec-project/util/http2_util"
 	utilLogger "github.com/omec-project/util/logger"
 	"github.com/urfave/cli/v3"

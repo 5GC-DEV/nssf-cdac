@@ -17,11 +17,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/5GC-DEV/openapi-cdac"
+	"github.com/5GC-DEV/openapi-cdac/Nnrf_NFManagement"
+	"github.com/5GC-DEV/openapi-cdac/models"
 	nssf_context "github.com/omec-project/nssf/context"
 	"github.com/omec-project/nssf/logger"
-	"github.com/omec-project/openapi"
-	"github.com/omec-project/openapi/Nnrf_NFManagement"
-	"github.com/omec-project/openapi/models"
 )
 
 func BuildNFProfile(context *nssf_context.NSSFContext) (profile models.NfProfile, err error) {

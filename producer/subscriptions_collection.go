@@ -17,8 +17,8 @@ package producer
 import (
 	"net/http"
 
+	"github.com/5GC-DEV/openapi-cdac/models"
 	"github.com/omec-project/nssf/logger"
-	"github.com/omec-project/openapi/models"
 	"github.com/omec-project/util/httpwrapper"
 )
 
