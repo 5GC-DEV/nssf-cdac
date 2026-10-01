@@ -3,12 +3,11 @@ module github.com/omec-project/nssf
 go 1.24.0
 
 require (
+	github.com/5GC-DEV/openapi-cdac v0.4.3
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/gin-gonic/gin v1.10.1
 	github.com/google/uuid v1.6.0
 	github.com/omec-project/config5g v1.6.2
-	github.com/omec-project/openapi v1.4.1
-	github.com/omec-project/util v1.3.2
 	github.com/prometheus/client_golang v1.22.0
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli/v3 v3.3.8
@@ -17,6 +16,7 @@ require (
 )
 
 require (
+	github.com/5GC-DEV/util-cdac v0.4.3 // indirect
 	github.com/antihax/optional v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -51,11 +51,11 @@ require (
 	github.com/ugorji/go/codec v1.2.14 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.17.0 // indirect
-	golang.org/x/crypto v0.38.0 // indirect
-	golang.org/x/net v0.40.0 // indirect
+	golang.org/x/crypto v0.39.0 // indirect
+	golang.org/x/net v0.41.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
-	golang.org/x/text v0.25.0 // indirect
+	golang.org/x/text v0.26.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250603155806-513f23925822 // indirect
 	google.golang.org/grpc v1.72.2 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect

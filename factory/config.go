@@ -13,10 +13,10 @@ package factory
 import (
 	"strconv"
 
+	"github.com/5GC-DEV/openapi-cdac/models"
+	utilLogger "github.com/5GC-DEV/util-cdac/logger"
 	protos "github.com/omec-project/config5g/proto/sdcoreConfig"
 	"github.com/omec-project/nssf/logger"
-	"github.com/omec-project/openapi/models"
-	utilLogger "github.com/omec-project/util/logger"
 )
 
 const (

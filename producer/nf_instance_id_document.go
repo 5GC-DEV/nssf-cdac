@@ -17,10 +17,10 @@ package producer
 import (
 	"net/http"
 
+	"github.com/5GC-DEV/openapi-cdac/models"
+	"github.com/5GC-DEV/util-cdac/httpwrapper"
 	"github.com/omec-project/nssf/logger"
 	"github.com/omec-project/nssf/plugin"
-	"github.com/omec-project/openapi/models"
-	"github.com/omec-project/util/httpwrapper"
 )
 
 // HandleNSSAIAvailabilityDelete - Deletes an already existing S-NSSAIs per TA

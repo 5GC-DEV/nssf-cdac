@@ -21,12 +21,12 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/5GC-DEV/openapi-cdac/models"
+	"github.com/5GC-DEV/util-cdac/httpwrapper"
 	"github.com/omec-project/nssf/logger"
 	stats "github.com/omec-project/nssf/metrics"
 	"github.com/omec-project/nssf/plugin"
 	"github.com/omec-project/nssf/util"
-	"github.com/omec-project/openapi/models"
-	"github.com/omec-project/util/httpwrapper"
 )
 
 // Parse NSSelectionGet query parameter

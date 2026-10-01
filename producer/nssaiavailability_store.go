@@ -19,12 +19,12 @@ import (
 	"reflect"
 	"strconv"
 
+	"github.com/5GC-DEV/openapi-cdac/models"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/omec-project/nssf/factory"
 	"github.com/omec-project/nssf/logger"
 	"github.com/omec-project/nssf/plugin"
 	"github.com/omec-project/nssf/util"
-	"github.com/omec-project/openapi/models"
 )
 
 // finds any key named "sst" with a string value, and converts it to an integer.

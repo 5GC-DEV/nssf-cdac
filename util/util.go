@@ -16,9 +16,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/5GC-DEV/openapi-cdac/models"
 	"github.com/omec-project/nssf/factory"
 	"github.com/omec-project/nssf/logger"
-	"github.com/omec-project/openapi/models"
 )
 
 // Title in Problem Details for NSSF HTTP APIs
