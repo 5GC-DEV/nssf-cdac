@@ -19,8 +19,8 @@ import (
 	"reflect"
 
 	"github.com/5GC-DEV/openapi-cdac/models"
+	"github.com/5GC-DEV/util-cdac/httpwrapper"
 	"github.com/omec-project/nssf/logger"
-	"github.com/omec-project/util/httpwrapper"
 )
 
 // HandleNSSAIAvailabilityUnsubscribe - Deletes an already existing NSSAI availability notification subscription

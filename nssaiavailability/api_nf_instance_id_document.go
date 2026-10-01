@@ -19,11 +19,11 @@ import (
 
 	"github.com/5GC-DEV/openapi-cdac"
 	"github.com/5GC-DEV/openapi-cdac/models"
+	"github.com/5GC-DEV/util-cdac/httpwrapper"
 	"github.com/gin-gonic/gin"
 	"github.com/omec-project/nssf/logger"
 	"github.com/omec-project/nssf/plugin"
 	"github.com/omec-project/nssf/producer"
-	"github.com/omec-project/util/httpwrapper"
 )
 
 func HTTPNSSAIAvailabilityDelete(c *gin.Context) {

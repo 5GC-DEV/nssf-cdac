@@ -18,8 +18,8 @@ import (
 	"net/http"
 
 	"github.com/5GC-DEV/openapi-cdac/models"
+	"github.com/5GC-DEV/util-cdac/httpwrapper"
 	"github.com/omec-project/nssf/logger"
-	"github.com/omec-project/util/httpwrapper"
 )
 
 // HandleNSSAIAvailabilityPost - Creates subscriptions for notification about updates to NSSAI availability information
